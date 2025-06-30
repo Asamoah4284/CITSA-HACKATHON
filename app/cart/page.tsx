@@ -1,5 +1,8 @@
 "use client"
 
+// This component is client-side only to prevent SSR issues with localStorage and window APIs
+// All browser-specific APIs are properly guarded with isClient checks
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -41,7 +44,8 @@ const PaymentButton = dynamic(
   }
 )
 
-export default function CartPage() {
+// Main cart component
+function CartPageContent() {
   const { cartItems, cartCount, cartTotal, isLoading, updateQuantity, removeFromCart, clearCart } = useCart()
   const { toast } = useToast()
   const router = useRouter()
@@ -50,7 +54,27 @@ export default function CartPage() {
   const [referralLink, setReferralLink] = useState("")
   const [pendingArtisans, setPendingArtisans] = useState<any[]>([])
   const [isProcessingPayment, setIsProcessingPayment] = useState(false)
+  const [isClient, setIsClient] = useState(false)
   const { isAuthenticated } = useAuth()
+
+  // Ensure we're on the client side
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
+
+  // Don't render anything until we're on the client
+  if (!isClient) {
+    return (
+      <div className="min-h-screen pt-8">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="h-8 w-8 animate-spin text-[var(--color-accent-primary)]" />
+            <span className="ml-2 text-gray-600">Loading...</span>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   const shipping = cartTotal > 100 ? 0 : 15
   const total = cartTotal + shipping
@@ -71,7 +95,7 @@ export default function CartPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            userId: (typeof window !== 'undefined' && localStorage.getItem('userId')) || 'guest',
+            userId: (isClient && typeof window !== 'undefined' && localStorage.getItem('userId')) || 'guest',
             items: cartItems,
             total,
             reference: reference.reference,
@@ -150,7 +174,8 @@ export default function CartPage() {
     console.log("Is artisanId 24 hex chars?", /^[a-f0-9]{24}$/.test(artisanId));
     
     try {
-      const token = localStorage.getItem('token');
+      // Get authentication token with SSR safety check
+      const token = isClient && typeof window !== 'undefined' ? localStorage.getItem('token') : null;
       if (!token) {
         toast({
           title: "Authentication required",
@@ -177,7 +202,8 @@ export default function CartPage() {
       console.log("Referral generation response data:", data);
       
       if (res.ok && data.referral && data.referral.referralCode) {
-        const referralLink = `${window.location.origin}/entrepreneurs/${artisanId}?ref=${data.referral.referralCode}`;
+        const origin = isClient && typeof window !== 'undefined' ? window.location.origin : '';
+        const referralLink = `${origin}/entrepreneurs/${artisanId}?ref=${data.referral.referralCode}`;
         setReferralLink(referralLink)
         toast({
           title: "Referral link generated!",
@@ -186,7 +212,8 @@ export default function CartPage() {
       } else if (res.status === 400 && data.error && data.error.includes('already generated')) {
         // User already has a referral link for this artisan
         if (data.referral && data.referral.referralCode) {
-          const referralLink = `${window.location.origin}/entrepreneurs/${artisanId}?ref=${data.referral.referralCode}`;
+          const origin = isClient && typeof window !== 'undefined' ? window.location.origin : '';
+          const referralLink = `${origin}/entrepreneurs/${artisanId}?ref=${data.referral.referralCode}`;
           setReferralLink(referralLink)
           toast({
             title: "Existing referral link found",
@@ -201,19 +228,18 @@ export default function CartPage() {
           });
         }
       } else {
-        setReferralLink('Could not generate referral link.')
+        console.error('Failed to generate referral link:', data.error);
         toast({
           title: "Error",
-          description: data.error || "Failed to generate referral link.",
+          description: data.error || "Failed to generate referral link",
           variant: "destructive"
         });
       }
-    } catch (e) {
-      console.error("Referral generation error:", e);
-      setReferralLink('Could not generate referral link.')
+    } catch (error) {
+      console.error('Error generating referral link:', error);
       toast({
         title: "Connection error",
-        description: "Failed to connect to server. Please try again.",
+        description: "Failed to generate referral link. Please try again.",
         variant: "destructive"
       });
     }
@@ -481,3 +507,5 @@ export default function CartPage() {
     </>
   )
 }
+
+export default CartPageContent
