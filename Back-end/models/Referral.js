@@ -159,7 +159,7 @@ referralSchema.methods.awardBonusPoints = function(qualityScore) {
 };
 
 // Indexes for better query performance
-referralSchema.index({ referrer: 1, artisan: 1 });
+referralSchema.index({ referrer: 1, artisan: 1 }, { unique: true });
 referralSchema.index({ referee: 1 });
 referralSchema.index({ status: 1 });
 referralSchema.index({ referralCode: 1 });
