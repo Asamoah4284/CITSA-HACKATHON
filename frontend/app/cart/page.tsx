@@ -27,6 +27,14 @@ if (projectCurrency === "USD") {
   paystackCurrency = "GHS"; // Use Ghana Cedis if project currency is USD
 }
 
+// Helper function to safely get origin
+const getOrigin = () => {
+  if (typeof window !== 'undefined') {
+    return window.location.origin
+  }
+  return '' // Return empty string during SSR
+}
+
 // Dynamically import PaymentButton with no SSR
 const PaymentButton = dynamic(
   () => import('@/components/PaymentButton'),
@@ -177,7 +185,7 @@ export default function CartPage() {
       console.log("Referral generation response data:", data);
       
       if (res.ok && data.referral && data.referral.referralCode) {
-        const referralLink = `${window.location.origin}/entrepreneurs/${artisanId}?ref=${data.referral.referralCode}`;
+        const referralLink = `${getOrigin()}/entrepreneurs/${artisanId}?ref=${data.referral.referralCode}`;
         setReferralLink(referralLink)
         toast({
           title: "Referral link generated!",
@@ -186,7 +194,7 @@ export default function CartPage() {
       } else if (res.status === 400 && data.error && data.error.includes('already generated')) {
         // User already has a referral link for this artisan
         if (data.referral && data.referral.referralCode) {
-          const referralLink = `${window.location.origin}/entrepreneurs/${artisanId}?ref=${data.referral.referralCode}`;
+          const referralLink = `${getOrigin()}/entrepreneurs/${artisanId}?ref=${data.referral.referralCode}`;
           setReferralLink(referralLink)
           toast({
             title: "Existing referral link found",

@@ -1,1 +1,1 @@
-self.__REACT_LOADABLE_MANIFEST="{\"app\\\\cart\\\\page.tsx -> @/components/PaymentButton\":{\"id\":\"app\\\\cart\\\\page.tsx -> @/components/PaymentButton\",\"files\":[\"static/chunks/_app-pages-browser_components_PaymentButton_tsx.js\"]}}"
+self.__REACT_LOADABLE_MANIFEST="{}"
