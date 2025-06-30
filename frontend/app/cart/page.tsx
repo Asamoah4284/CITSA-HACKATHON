@@ -10,8 +10,7 @@ import Link from "next/link"
 import { motion } from "framer-motion"
 import { useCart } from "@/hooks/use-cart"
 import { useAuth } from "@/hooks/use-auth"
-import { usePaystackPayment } from 'react-paystack'
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useToast } from "@/hooks/use-toast"
 import { ToastAction } from "@/components/ui/toast"
 import { useRouter } from "next/navigation"
@@ -59,73 +58,79 @@ export default function CartPage() {
   const [pendingArtisans, setPendingArtisans] = useState<any[]>([])
   const [isProcessingPayment, setIsProcessingPayment] = useState(false)
   const { isAuthenticated } = useAuth()
+  
+  // State for client-side values
+  const [userId, setUserId] = useState<string>('guest')
+  const [userToken, setUserToken] = useState<string>('')
+  const [paymentSuccess, setPaymentSuccess] = useState(false)
+  const latestReference = useRef<any>(null)
 
   const shipping = cartTotal > 100 ? 0 : 15
   const total = cartTotal + shipping
 
-  // Paystack config
-  const config = {
-    reference: new Date().getTime().toString(),
-    email: "customer@example.com", // Replace with real user email
-    amount: total * 100, // smallest currency unit
-    publicKey: "pk_test_c827720756c17a27051917f50a45e18e1cb423ae",
-    currency: paystackCurrency,
-    onSuccess: async (reference: any) => {
-      console.log("Payment success", reference);
-      setIsProcessingPayment(false)
-      // Save order to backend
-      try {
-        await fetch('http://localhost:5000/app/orders', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: (typeof window !== 'undefined' && localStorage.getItem('userId')) || 'guest',
-            items: cartItems,
-            total,
-            reference: reference.reference,
-          })
-        })
-      } catch (e) {
-        // Optionally show error toast
-      }
-      
-      // Get unique artisans BEFORE clearing the cart
-      console.log("Cart items before processing:", cartItems);
-      const uniqueArtisanIds = Array.from(new Set(cartItems.map(item => item.entrepreneurId)));
-      console.log("Unique artisan IDs:", uniqueArtisanIds);
-      
-      const uniqueArtisans = uniqueArtisanIds.map(id => {
-        const item = cartItems.find(item => item.entrepreneurId === id);
-        return {
-          _id: id,
-          id: id,
-          entrepreneurId: id,
-          entrepreneur: item?.entrepreneur || 'Unknown Artisan'
-        };
-      });
-      
-      console.log("Unique artisans for modal:", uniqueArtisans);
-      setPendingArtisans(uniqueArtisans)
-      setCurrentArtisan(uniqueArtisans[0])
-      console.log("Modal should now be visible");
-      clearCart();
-      toast({
-        title: "Payment Successful!",
-        description: `Your payment was successful. Reference: ${reference.reference}`,
-        action: (
-          <button onClick={() => router.push('/orders')} className="underline text-primary">
-            View Order
-          </button>
-        )
-      })
-    },
-    onClose: () => {
-      setIsProcessingPayment(false)
-      alert('Payment dialog closed')
+  // Initialize client-side values in useEffect
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // Get userId from localStorage
+      const storedUserId = localStorage.getItem('userId') || 'guest'
+      setUserId(storedUserId)
+      // Get token from localStorage
+      const storedToken = localStorage.getItem('token') || ''
+      setUserToken(storedToken)
     }
+  }, [])
+
+  // PaymentButton onSuccess wrapper
+  const handlePaymentButtonSuccess = () => {
+    setPaymentSuccess(true)
   }
 
-  const initializePayment = usePaystackPayment(config)
+  // Effect to handle order creation and modal logic after payment
+  useEffect(() => {
+    if (paymentSuccess) {
+      // Use the latest reference if needed (could be set in PaymentButton via callback, or just trigger order creation here)
+      (async () => {
+        setIsProcessingPayment(false)
+        try {
+          await fetch('http://localhost:5000/app/orders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: userId,
+              items: cartItems,
+              total,
+              reference: latestReference.current || 'N/A',
+            })
+          })
+        } catch (e) {
+          // Optionally show error toast
+        }
+        const uniqueArtisanIds = Array.from(new Set(cartItems.map(item => item.entrepreneurId)));
+        const uniqueArtisans = uniqueArtisanIds.map(id => {
+          const item = cartItems.find(item => item.entrepreneurId === id);
+          return {
+            _id: id,
+            id: id,
+            entrepreneurId: id,
+            entrepreneur: item?.entrepreneur || 'Unknown Artisan'
+          };
+        });
+        setPendingArtisans(uniqueArtisans)
+        setCurrentArtisan(uniqueArtisans[0])
+        clearCart();
+        toast({
+          title: "Payment Successful!",
+          description: `Your payment was successful.`,
+          action: (
+            <button onClick={() => router.push('/orders')} className="underline text-primary">
+              View Order
+            </button>
+          )
+        })
+        setPaymentSuccess(false)
+      })()
+    }
+  }, [paymentSuccess])
 
   const handleJoinCircle = async (artisan: any) => {
     // Check if user is authenticated
@@ -158,8 +163,8 @@ export default function CartPage() {
     console.log("Is artisanId 24 hex chars?", /^[a-f0-9]{24}$/.test(artisanId));
     
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
+      // Use the token from state instead of direct localStorage access
+      if (!userToken) {
         toast({
           title: "Authentication required",
           description: "Please log in to generate referral links.",
@@ -173,7 +178,7 @@ export default function CartPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${userToken}`
         },
         body: JSON.stringify({
           artisanId: artisanId
@@ -449,17 +454,12 @@ export default function CartPage() {
                     <span className="font-mono">${total.toFixed(2)}</span>
                   </div>
 
-                  <Button
-                    className="w-full bg-[var(--color-accent-primary)] hover:bg-[var(--color-accent-primary)]/90 text-white"
-                    size="lg"
-                    disabled={isProcessingPayment}
-                    onClick={() => {
-                      setIsProcessingPayment(true)
-                      initializePayment(config)
-                    }}
-                  >
-                    {isProcessingPayment ? 'Processing...' : 'Proceed to Checkout'}
-                  </Button>
+                  {/* Payment Button (dynamic, client-only) */}
+                  <PaymentButton
+                    total={total}
+                    currency={paystackCurrency}
+                    onSuccess={handlePaymentButtonSuccess}
+                  />
 
                   <div className="text-center">
                     <Link href="/marketplace">

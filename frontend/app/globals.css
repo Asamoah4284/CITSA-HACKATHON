@@ -33,40 +33,45 @@
   }
 
   .dark {
-    /* Dark mode disabled - use light mode variables */
-    --background: 42 15% 91%; /* Off-White Background #EEEC2 */
-    --foreground: 0 0% 0%; /* Pure Black #000000 */
-    --card: 42 15% 91%; /* Off-White Background */
-    --card-foreground: 0 0% 0%; /* Pure Black */
-    --popover: 42 15% 91%; /* Off-White Background */
-    --popover-foreground: 0 0% 0%; /* Pure Black */
-    --primary: 16 58% 60%; /* Clay Terracotta #DA7756 */
-    --primary-foreground: 42 15% 91%; /* Off-White for contrast */
-    --secondary: 42 15% 85%; /* Lighter version of background */
-    --secondary-foreground: 0 0% 0%; /* Pure Black */
-    --muted: 42 15% 85%; /* Lighter version of background */
-    --muted-foreground: 36 20% 32%; /* Dark Gray Text #3D3929 */
-    --accent: 16 67% 50%; /* Rust Button Accent #BD5D3A */
-    --accent-foreground: 42 15% 91%; /* Off-White for contrast */
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 42 15% 80%; /* Slightly darker than background */
-    --input: 42 15% 85%; /* Same as muted */
-    --ring: 16 58% 60%; /* Clay Terracotta */
+    /* Dark mode - Complementary to light theme */
+    --background: 240 10% 3.9%; /* Very dark background */
+    --foreground: 0 0% 98%; /* Light text for contrast */
+    --card: 240 10% 5%; /* Slightly lighter than background */
+    --card-foreground: 0 0% 98%; /* Light text */
+    --popover: 240 10% 5%; /* Same as card */
+    --popover-foreground: 0 0% 98%; /* Light text */
+    --primary: 16 58% 60%; /* Keep terracotta as primary */
+    --primary-foreground: 0 0% 98%; /* Light text for contrast */
+    --secondary: 240 10% 10%; /* Darker secondary */
+    --secondary-foreground: 0 0% 98%; /* Light text */
+    --muted: 240 10% 10%; /* Same as secondary */
+    --muted-foreground: 240 5% 64.9%; /* Muted gray text */
+    --accent: 16 67% 50%; /* Keep rust accent */
+    --accent-foreground: 0 0% 98%; /* Light text for contrast */
+    --destructive: 0 62.8% 30.6%; /* Darker destructive */
+    --destructive-foreground: 0 0% 98%; /* Light text */
+    --border: 240 10% 15%; /* Dark border */
+    --input: 240 10% 10%; /* Dark input background */
+    --ring: 16 58% 60%; /* Keep terracotta ring */
     --chart-1: 16 58% 60%; /* Clay Terracotta */
     --chart-2: 16 67% 50%; /* Rust Button Accent */
-    --chart-3: 36 20% 32%; /* Dark Gray Text */
-    --chart-4: 42 15% 70%; /* Neutral tone */
+    --chart-3: 240 5% 64.9%; /* Muted gray */
+    --chart-4: 240 10% 20%; /* Dark neutral */
     --chart-5: 16 45% 45%; /* Darker terracotta */
   }
 }
 
 @layer base {
+  html {
+    @apply bg-background;
+  }
+  
   * {
     @apply border-border;
   }
+  
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground min-h-screen;
   }
 }
 
@@ -89,9 +94,9 @@
   transition: all 0.3s ease;
 }
 
-.card-glow:hover {
-  box-shadow: 0 10px 25px -5px rgba(218, 119, 86, 0.15), 0 10px 10px -5px rgba(218, 119, 86, 0.08);
-  transform: translateY(-2px);
+/* Dark mode specific styles */
+.dark .card-glow:hover {
+  box-shadow: 0 8px 25px rgba(218, 119, 86, 0.15);
 }
 
 .growth-arc {

@@ -49,12 +49,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} ${sora.variable} ${jetbrainsMono.variable} font-body antialiased`}>
+      <body className={`${inter.variable} ${sora.variable} ${jetbrainsMono.variable} font-body antialiased dark`}>
         <AuthProvider>
           <CartProvider>
             <ThemeProvider 
               attribute="class" 
-              defaultTheme="light" 
+              defaultTheme="dark" 
               enableSystem 
               disableTransitionOnChange
             >

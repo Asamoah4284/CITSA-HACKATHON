@@ -28,42 +28,42 @@ import { fetchProductImage, preloadProductImages } from "@/lib/image-utils"
 const heroImages = [
   {
     id: 1,
-    src: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80",
+    src: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80",
     alt: "African woman entrepreneur working on traditional textiles",
     name: "Aisha Textiles",
     location: "Lagos, Nigeria"
   },
   {
     id: 2,
-    src: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2066&q=80",
+    src: "https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=800&q=80",
     alt: "African craftsman creating beautiful wooden sculptures",
     name: "Kwame Woodcraft",
     location: "Accra, Ghana"
   },
   {
     id: 3,
-    src: "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2069&q=80",
+    src: "https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=800&q=80",
     alt: "African fashion designer showcasing traditional patterns",
     name: "Zara Fashion House",
     location: "Cape Town, South Africa"
   },
   {
     id: 4,
-    src: "https://images.unsplash.com/photo-1594736797933-d0401ba2fe65?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80",
+    src: "https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?auto=format&fit=crop&w=800&q=80",
     alt: "African beauty entrepreneur with natural products",
     name: "Fatima Beauty",
     location: "Nairobi, Kenya"
   },
   {
     id: 5,
-    src: "https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80",
+    src: "https://images.unsplash.com/photo-1526178613658-3f1622045564?auto=format&fit=crop&w=800&q=80",
     alt: "African jewelry maker crafting traditional beads",
     name: "Mama Beads",
     location: "Dakar, Senegal"
   },
   {
     id: 6,
-    src: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80",
+    src: "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=800&q=80",
     alt: "African potter creating beautiful ceramics",
     name: "Kofi Pottery",
     location: "Kumasi, Ghana"
@@ -190,6 +190,14 @@ export default function HomePage() {
   const [productImages, setProductImages] = useState<Record<string, string>>({})
   const [imagesLoading, setImagesLoading] = useState(true)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const [heroImagesLoaded, setHeroImagesLoaded] = useState<boolean[]>(new Array(heroImages.length).fill(false))
+
+  // Debug: Log hero images on component mount
+  useEffect(() => {
+    console.log('Hero images array:', heroImages)
+    console.log('Hero images length:', heroImages.length)
+    console.log('Current image index:', currentImageIndex)
+  }, [currentImageIndex])
 
   // Auto-rotate carousel images
   useEffect(() => {
@@ -204,6 +212,7 @@ export default function HomePage() {
     const loadImages = async () => {
       setImagesLoading(true)
       try {
+        console.log('Loading product images...')
         const imageCache = await preloadProductImages(
           featuredProducts.map(p => ({ 
             name: p.name, 
@@ -213,6 +222,7 @@ export default function HomePage() {
                      p.name.includes("Jewelry") ? "Jewelry" : "Fashion"
           }))
         )
+        console.log('Product images loaded:', imageCache)
         setProductImages(imageCache)
       } catch (error) {
         console.error('Failed to load product images:', error)
@@ -223,6 +233,22 @@ export default function HomePage() {
 
     loadImages()
   }, [])
+
+  // Handle hero image load events
+  const handleHeroImageLoad = (index: number) => {
+    console.log(`Hero image ${index} loaded successfully`)
+    setHeroImagesLoaded(prev => {
+      const newState = [...prev]
+      newState[index] = true
+      return newState
+    })
+  }
+
+  // Get the current hero image source (primary or fallback)
+  const getCurrentHeroImageSrc = () => {
+    const currentImage = heroImages[currentImageIndex]
+    return currentImage.src
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -309,10 +335,18 @@ export default function HomePage() {
                         transition={{ duration: 0.6 }}
                         className="absolute inset-0"
                       >
+                        {/* Loading state for hero images */}
+                        {!heroImagesLoaded[currentImageIndex] && (
+                          <div className="absolute inset-0 bg-gray-200 animate-pulse flex items-center justify-center">
+                            <Loader2 className="h-12 w-12 animate-spin text-gray-400" />
+                          </div>
+                        )}
+                        
                         <img
-                          src={heroImages[currentImageIndex].src}
+                          src='https://i.pinimg.com/736x/74/50/88/74508867279bc50021c77e80d5f0c1fb.jpg'
                           alt={heroImages[currentImageIndex].alt}
                           className="w-full h-full object-cover rounded-2xl"
+                          style={{ minHeight: 400, background: "#fff" }}
                         />
                         
                         {/* Image Overlay with Info */}
