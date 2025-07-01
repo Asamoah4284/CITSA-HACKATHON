@@ -36,15 +36,10 @@
       "static/chunks/main-app.js",
       "static/chunks/app/marketplace/loading.js"
     ],
-    "/entrepreneurs/page": [
+    "/_not-found/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/entrepreneurs/page.js"
-    ],
-    "/entrepreneurs/loading": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/entrepreneurs/loading.js"
+      "static/chunks/app/_not-found/page.js"
     ]
   }
 }

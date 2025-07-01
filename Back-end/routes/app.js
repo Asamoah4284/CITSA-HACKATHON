@@ -427,6 +427,31 @@ router.post('/orders', async (req, res) => {
     const { userId, items, total, reference } = req.body;
     const order = new Order({ userId, items, total, reference, createdAt: new Date() });
     await order.save();
+
+    // === REFERRAL REWARD LOGIC ===
+    // For each artisan in the order, check for an active referral
+    const productIds = items.map(item => item.productId);
+    const products = await Product.find({ _id: { $in: productIds } });
+    const artisanIds = [...new Set(products.map(p => p.artisan.toString()))];
+    for (const artisanId of artisanIds) {
+      // Find an active referral for this user/artisan
+      const referral = await Referral.findOne({
+        referee: userId,
+        artisan: artisanId,
+        status: 'active'
+      });
+      if (referral) {
+        await referral.awardBasePoints();
+        const referrer = await User.findById(referral.referrer);
+        if (referrer) {
+          await referrer.addPoints(referral.basePointsAwarded);
+        }
+        referral.status = 'completed';
+        await referral.save();
+      }
+    }
+    // === END REFERRAL REWARD LOGIC ===
+
     res.status(201).json(order);
   } catch (err) {
     res.status(500).json({ error: 'Failed to save order' });
@@ -640,55 +665,23 @@ router.post('/claim-referral', auth, claimReferralValidation, handleValidationEr
 
     await newReferral.save();
 
-    // Award base points to referrer
-    await newReferral.awardBasePoints();
-    
-    // Get the referrer user to update their points
-    const referrer = await User.findById(referral.referrer);
-    if (referrer) {
-      await referrer.addPoints(newReferral.basePointsAwarded);
-    }
-
-    // Make async call to Langflow webhook
-    if (process.env.LANGFLOW_WEBHOOK_URL) {
-      try {
-        const artisan = await Artisan.findById(referral.artisan);
-        await axios.post(process.env.LANGFLOW_WEBHOOK_URL, {
-          referral_id: newReferral._id,
-          referrer_email: referrer.email,
-          referee_email: req.user.email,
-          artisan_name: artisan.name,
-          artisan_specialty: artisan.specialty,
-          artisan_location: artisan.location
-        }, {
-          timeout: 5000 // 5 second timeout
-        });
-        console.log('Langflow webhook called successfully for referral:', newReferral._id);
-      } catch (webhookError) {
-        console.error('Langflow webhook error:', webhookError.message);
-        // Don't fail the request if webhook fails
-      }
-    }
-
     res.json({
       message: 'Referral claimed successfully',
       referral: {
         id: newReferral._id,
         referralCode: newReferral.referralCode,
         status: newReferral.status,
-        basePointsAwarded: newReferral.basePointsAwarded,
-        totalPointsAwarded: newReferral.totalPointsAwarded,
         createdAt: newReferral.createdAt
       },
       referrer: {
-        id: referrer._id,
-        name: referrer.name,
-        email: referrer.email
+        id: referral.referrer,
+        name: referral.artisan.name,
+        email: referral.artisan.email
       },
       artisan: {
-        id: referral.artisan,
-        name: artisan.name,
-        specialty: artisan.specialty
+        id: referral.artisan._id,
+        name: referral.artisan.name,
+        specialty: referral.artisan.specialty
       }
     });
   } catch (error) {

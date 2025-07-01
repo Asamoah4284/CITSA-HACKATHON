@@ -122,15 +122,17 @@ export default function SignInPage() {
         console.log('💾 Saved user email to localStorage')
       }
 
-      // Redirect based on user type
-      console.log('👤 User type:', data.user.userType)
-      if (data.user.userType === "artisan") {
-        console.log('🔄 Redirecting to dashboard...')
-        router.push('/dashboard')
-      } else {
-        console.log('🔄 Redirecting to marketplace...')
-        router.push('/marketplace')
-      }
+      // Redirect based on user type, with a short delay to allow context update
+      setTimeout(() => {
+        console.log('👤 User type:', data.user.userType)
+        if (data.user.userType === "artisan") {
+          console.log('🔄 Redirecting to dashboard...')
+          router.push('/dashboard')
+        } else {
+          console.log('🔄 Redirecting to marketplace...')
+          router.push('/marketplace')
+        }
+      }, 100)
 
     } catch (error: any) {
       console.error('💥 Login error:', error)
