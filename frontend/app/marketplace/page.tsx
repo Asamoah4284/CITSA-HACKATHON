@@ -14,6 +14,7 @@ import { motion } from "framer-motion"
 import { fetchProductImage, preloadProductImages } from "@/lib/image-utils"
 import { useCart } from "@/hooks/use-cart"
 import { toast } from "@/hooks/use-toast"
+import { getApiUrl } from "@/lib/api-config"
 
 const categories = ["All", "Fashion", "Accessories", "Beauty", "Art", "Food", "Jewelry"]
 
@@ -36,8 +37,9 @@ export default function MarketplacePage() {
         console.log("Starting to fetch marketplace data...")
         
         // Fetch artisans
-        console.log("Fetching artisans from:", 'http://localhost:5000/public/artisans')
-        const artisansRes = await fetch('http://localhost:5000/public/artisans')
+        const artisansUrl = getApiUrl('/public/artisans')
+        console.log("Fetching artisans from:", artisansUrl)
+        const artisansRes = await fetch(artisansUrl)
         console.log("Artisans response status:", artisansRes.status)
         
         if (!artisansRes.ok) {
@@ -53,8 +55,9 @@ export default function MarketplacePage() {
         console.log("Processed artisans array:", artisansArray)
 
         // Fetch products
-        console.log("Fetching products from:", 'http://localhost:5000/public/products')
-        const productsRes = await fetch('http://localhost:5000/public/products')
+        const productsUrl = getApiUrl('/public/products')
+        console.log("Fetching products from:", productsUrl)
+        const productsRes = await fetch(productsUrl)
         console.log("Products response status:", productsRes.status)
         
         if (!productsRes.ok) {

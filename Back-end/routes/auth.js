@@ -110,7 +110,12 @@ router.post('/login', loginValidation, handleValidationErrors, async (req, res) 
         id: user._id,
         email: user.email,
         name: user.name,
-        points: user.points
+        userType: user.userType,
+        points: user.points,
+        businessName: user.businessName,
+        businessCategory: user.businessCategory,
+        country: user.country,
+        city: user.city
       },
       token
     });

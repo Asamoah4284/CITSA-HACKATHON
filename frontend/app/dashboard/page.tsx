@@ -23,6 +23,7 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { Line } from 'react-chartjs-2';
 import 'chart.js/auto';
+import { getApiUrl } from "@/lib/api-config"
 
 interface ReferralGroup {
   referralCode: string
@@ -122,7 +123,8 @@ export default function DashboardPage() {
         return
       }
 
-      const response = await fetch('http://localhost:5000/app/dashboard', {
+      const dashboardUrl = getApiUrl('/app/dashboard')
+      const response = await fetch(dashboardUrl, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

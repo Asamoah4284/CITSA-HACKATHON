@@ -10,6 +10,7 @@ import { Search, MapPin, Star, Users, Package, TrendingUp } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { motion } from "framer-motion"
+import { getApiUrl } from "@/lib/api-config"
 
 const categories = ["All", "Fashion", "Accessories", "Technology", "Food & Beverage", "Beauty & Wellness", "Jewelry"]
 const locations = ["All Locations", "Nigeria", "Ghana", "Kenya", "Senegal", "Morocco", "South Africa"]
@@ -25,7 +26,8 @@ export default function EntrepreneursPage() {
   useEffect(() => {
     const fetchEntrepreneurs = async () => {
       try {
-        const res = await fetch('http://localhost:5000/public/artisans')
+        const artisansUrl = getApiUrl('/public/artisans')
+        const res = await fetch(artisansUrl)
         const data = await res.json()
         const entrepreneursArray = Array.isArray(data) ? data : 
                                 (data && Array.isArray(data.artisans)) ? data.artisans : []

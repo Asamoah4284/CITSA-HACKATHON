@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getApiUrl } from '@/lib/api-config'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     
-    // Forward the request to the backend server
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000'
-    const response = await fetch(`${backendUrl}/auth/register`, {
+    // Use the API configuration utility to get the correct backend URL
+    const registerUrl = getApiUrl('/auth/register')
+    const response = await fetch(registerUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

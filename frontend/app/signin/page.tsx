@@ -71,6 +71,16 @@ export default function SignInPage() {
     setIsLoading(true)
     setErrors({})
 
+    // Add comprehensive logging for debugging
+    console.log('🚀 Starting login process...')
+    console.log('📧 Email:', formData.email)
+    console.log('🔗 API Endpoint:', '/api/auth/login')
+    console.log('📦 Request payload:', {
+      email: formData.email,
+      password: '[HIDDEN]'
+    })
+
+    
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
@@ -83,31 +93,58 @@ export default function SignInPage() {
         }),
       })
 
-      const data = await response.json()
+      console.log('📡 Response status:', response.status)
+      console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()))
+
+      let data
+      try {
+        data = await response.json()
+        console.log('📡 Response data:', data)
+      } catch (parseError) {
+        console.error('❌ Failed to parse response:', parseError)
+        throw new Error('Invalid response from server')
+      }
 
       if (!response.ok) {
-        throw new Error(data.error || 'Login failed')
+        console.error('❌ Login failed:', data)
+        throw new Error(data.error || `Login failed (${response.status})`)
       }
+
+      console.log('✅ Login successful, user data:', data.user)
+      console.log('🔑 Token received:', data.token ? 'Yes' : 'No')
 
       // Use the login function from useAuth hook
       login(data.user, data.token)
+      
       // Save user email to localStorage for referral system
       if (data.user && data.user.email) {
         localStorage.setItem('userEmail', data.user.email)
+        console.log('💾 Saved user email to localStorage')
       }
 
       // Redirect based on user type
+      console.log('👤 User type:', data.user.userType)
       if (data.user.userType === "artisan") {
+        console.log('🔄 Redirecting to dashboard...')
         router.push('/dashboard')
       } else {
+        console.log('🔄 Redirecting to marketplace...')
         router.push('/marketplace')
       }
 
     } catch (error: any) {
-      console.error('Login error:', error)
-      setErrors({ general: error.message || 'Login failed. Please check your credentials and try again.' })
+      console.error('💥 Login error:', error)
+      console.error('💥 Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      })
+      setErrors({ 
+        general: error.message || 'Login failed. Please check your credentials and try again.' 
+      })
     } finally {
       setIsLoading(false)
+      console.log('🏁 Login process completed')
     }
   }
 
@@ -316,6 +353,12 @@ export default function SignInPage() {
                 Don't have an account?{" "}
                 <Link href="/signup" className="text-terracotta-600 hover:text-terracotta-700 font-medium underline">
                   Create one
+                </Link>
+              </p>
+              <p className="text-xs text-muted-foreground mt-2">
+                Having issues?{" "}
+                <Link href="/test-connection" className="text-terracotta-600 hover:text-terracotta-700 underline">
+                  Test backend connection
                 </Link>
               </p>
             </div>

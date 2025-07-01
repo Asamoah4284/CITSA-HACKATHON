@@ -16,7 +16,7 @@ const PORT = process.env.PORT || 5000;
 // Security middleware
 app.use(helmet());
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: true, // Allow all origins for testing
   credentials: true
 }));
 
@@ -52,6 +52,15 @@ app.get('/health', (req, res) => {
     status: 'OK', 
     message: 'The Artisan\'s Circle API is running',
     timestamp: new Date().toISOString()
+  });
+});
+
+// Test endpoint for debugging
+app.get('/test', (req, res) => {
+  res.status(200).json({ 
+    message: 'Backend is working!',
+    timestamp: new Date().toISOString(),
+    cors: 'enabled'
   });
 });
 

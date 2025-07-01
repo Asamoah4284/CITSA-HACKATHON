@@ -14,6 +14,7 @@ import { fetchProductImage, preloadProductImages } from "@/lib/image-utils"
 import { useParams, useSearchParams } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
 import { useToast } from "@/hooks/use-toast"
+import { getApiUrl } from "@/lib/api-config"
 
 export default function EntrepreneurPage() {
   const params = useParams()
@@ -50,8 +51,9 @@ export default function EntrepreneurPage() {
             return
           }
 
-          console.log("Sending claim request to:", 'http://localhost:5000/app/claim-referral')
-          const response = await fetch('http://localhost:5000/app/claim-referral', {
+          const claimUrl = getApiUrl('/app/claim-referral')
+          console.log("Sending claim request to:", claimUrl)
+          const response = await fetch(claimUrl, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -124,7 +126,8 @@ export default function EntrepreneurPage() {
   useEffect(() => {
     const fetchEntrepreneur = async () => {
       try {
-        const res = await fetch(`http://localhost:5000/public/artisans/${params.slug}`)
+        const artisanUrl = getApiUrl(`/public/artisans/${params.slug}`)
+        const res = await fetch(artisanUrl)
         const data = await res.json()
         if (data.artisan) {
           setEntrepreneur(data.artisan)

@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { getApiUrl } from "@/lib/api-config"
 
 interface Order {
   _id: string
@@ -22,7 +23,8 @@ export default function OrdersPage() {
       setError("")
       try {
         const userId = (typeof window !== 'undefined' && localStorage.getItem('userId')) || 'guest'
-        const res = await fetch(`http://localhost:5000/app/orders?userId=${userId}`)
+        const ordersUrl = getApiUrl(`/app/orders?userId=${userId}`)
+        const res = await fetch(ordersUrl)
         if (!res.ok) throw new Error("Failed to fetch orders")
         const data = await res.json()
         setOrders(data)

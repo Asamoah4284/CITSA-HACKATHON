@@ -16,6 +16,7 @@ import { ToastAction } from "@/components/ui/toast"
 import { useRouter } from "next/navigation"
 import dynamic from "next/dynamic"
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { getApiUrl } from "@/lib/api-config"
 
 // Set your project currency here
 const projectCurrency = "USD"; // Change to "USD" or "NGN" as needed
@@ -92,7 +93,8 @@ export default function CartPage() {
       (async () => {
         setIsProcessingPayment(false)
         try {
-          await fetch('http://localhost:5000/app/orders', {
+          const ordersUrl = getApiUrl('/app/orders')
+          await fetch(ordersUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -174,7 +176,8 @@ export default function CartPage() {
       }
 
       console.log("Sending request to generate referral for artisan:", artisanId);
-      const res = await fetch('http://localhost:5000/app/generate-referral-link', {
+      const referralUrl = getApiUrl('/app/generate-referral-link')
+      const res = await fetch(referralUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
