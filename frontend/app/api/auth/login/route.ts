@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getApiUrl } from '@/lib/api-config'
 
 export async function POST(request: NextRequest) {
   console.log('🚀 Login API route called')
@@ -7,9 +8,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     console.log('🔐 Login request body:', body)
     
-    // Temporarily hardcode the backend URL for testing
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000'
-    const loginUrl = `${backendUrl}/auth/login`
+    // Use the API configuration utility to get the correct backend URL
+    const loginUrl = getApiUrl('/auth/login')
     console.log('🌐 Backend URL from env:', process.env.NEXT_PUBLIC_BACKEND_URL)
     console.log('🌐 Sending request to:', loginUrl)
     

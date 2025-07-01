@@ -23,6 +23,7 @@ import {
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
 import { fetchProductImage, preloadProductImages } from "@/lib/image-utils"
+import { testApiConfiguration } from "@/lib/api-config"
 
 // Hero carousel images of African entrepreneurs
 const heroImages = [
@@ -198,6 +199,11 @@ export default function HomePage() {
     console.log('Hero images length:', heroImages.length)
     console.log('Current image index:', currentImageIndex)
   }, [currentImageIndex])
+
+  // Test API configuration on component mount
+  useEffect(() => {
+    testApiConfiguration()
+  }, [])
 
   // Auto-rotate carousel images
   useEffect(() => {

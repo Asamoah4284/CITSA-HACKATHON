@@ -13,6 +13,10 @@ const internalRoutes = require('./routes/internal');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Log port configuration for debugging
+console.log(`🔧 Port configuration: ${process.env.PORT ? `Environment PORT=${process.env.PORT}` : 'Using default PORT=5000'}`);
+console.log(`🎯 Server will start on port: ${PORT}`);
+
 // Security middleware
 app.use(helmet());
 app.use(cors({
@@ -86,6 +90,8 @@ if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`🚀 The Artisan's Circle API server running on port ${PORT}`);
     console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🌐 Server URL: http://localhost:${PORT}`);
+    console.log(`🔍 Health check: http://localhost:${PORT}/health`);
   });
 }
 
