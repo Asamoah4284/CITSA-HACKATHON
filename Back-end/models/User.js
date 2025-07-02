@@ -28,6 +28,13 @@ const userSchema = new mongoose.Schema({
     required: [true, 'User type is required'],
     default: 'customer'
   },
+  // Referral code field
+  referralCode: {
+    type: String,
+    default: null,
+    trim: true,
+    maxlength: [20, 'Referral code cannot exceed 20 characters']
+  },
   // Customer fields
   points: {
     type: Number,
