@@ -370,9 +370,15 @@ router.get('/dashboard', auth, async (req, res) => {
   }
 });
 
-// GET /app/referrals - Get user's referrals
-router.get('/referrals', async (req, res) => {
+router.get('/referrals', auth, async (req, res) => {
   try {
+    // Ensure user is authenticated
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({
+        error: 'Unauthorized. User not authenticated.'
+      });
+    }
+
     const { page = 1, limit = 10, status } = req.query;
     const userId = req.user._id;
 
@@ -381,11 +387,14 @@ router.get('/referrals', async (req, res) => {
       query.status = status;
     }
 
+    const numericLimit = parseInt(limit);
+    const numericPage = parseInt(page);
+
     const referrals = await Referral.find(query)
       .populate('referee', 'name email')
       .populate('artisan', 'name specialty location imageUrl')
-      .limit(limit * 1)
-      .skip((page - 1) * limit)
+      .limit(numericLimit)
+      .skip((numericPage - 1) * numericLimit)
       .sort({ createdAt: -1 });
 
     const total = await Referral.countDocuments(query);
@@ -405,13 +414,14 @@ router.get('/referrals', async (req, res) => {
         createdAt: referral.createdAt
       })),
       pagination: {
-        currentPage: parseInt(page),
-        totalPages: Math.ceil(total / limit),
+        currentPage: numericPage,
+        totalPages: Math.ceil(total / numericLimit),
         totalReferrals: total,
-        hasNextPage: page * limit < total,
-        hasPrevPage: page > 1
+        hasNextPage: numericPage * numericLimit < total,
+        hasPrevPage: numericPage > 1
       }
     });
+
   } catch (error) {
     console.error('Get referrals error:', error);
     res.status(500).json({
