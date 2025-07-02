@@ -22,48 +22,48 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
-import { testApiConfiguration } from "@/lib/api-config"
+import { fetchProductImage, preloadProductImages } from "@/lib/image-utils"
 
 // Hero carousel images of African entrepreneurs
 const heroImages = [
   {
     id: 1,
-    src: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80",
+    src: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80",
     alt: "African woman entrepreneur working on traditional textiles",
     name: "Aisha Textiles",
     location: "Lagos, Nigeria"
   },
   {
     id: 2,
-    src: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2066&q=80",
+    src: "https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=800&q=80",
     alt: "African craftsman creating beautiful wooden sculptures",
     name: "Kwame Woodcraft",
     location: "Accra, Ghana"
   },
   {
     id: 3,
-    src: "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2069&q=80",
+    src: "https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=800&q=80",
     alt: "African fashion designer showcasing traditional patterns",
     name: "Zara Fashion House",
     location: "Cape Town, South Africa"
   },
   {
     id: 4,
-    src: "https://images.unsplash.com/photo-1594736797933-d0401ba2fe65?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80",
+    src: "https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?auto=format&fit=crop&w=800&q=80",
     alt: "African beauty entrepreneur with natural products",
     name: "Fatima Beauty",
     location: "Nairobi, Kenya"
   },
   {
     id: 5,
-    src: "https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80",
+    src: "https://images.unsplash.com/photo-1526178613658-3f1622045564?auto=format&fit=crop&w=800&q=80",
     alt: "African jewelry maker crafting traditional beads",
     name: "Mama Beads",
     location: "Dakar, Senegal"
   },
   {
     id: 6,
-    src: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80",
+    src: "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=800&q=80",
     alt: "African potter creating beautiful ceramics",
     name: "Kofi Pottery",
     location: "Kumasi, Ghana"
@@ -187,12 +187,17 @@ const features = [
 ]
 
 export default function HomePage() {
+  const [productImages, setProductImages] = useState<Record<string, string>>({})
+  const [imagesLoading, setImagesLoading] = useState(true)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const [heroImagesLoaded, setHeroImagesLoaded] = useState<boolean[]>(new Array(heroImages.length).fill(false))
 
-  // Test API configuration on component mount
+  // Debug: Log hero images on component mount
   useEffect(() => {
-    testApiConfiguration()
-  }, [])
+    console.log('Hero images array:', heroImages)
+    console.log('Hero images length:', heroImages.length)
+    console.log('Current image index:', currentImageIndex)
+  }, [currentImageIndex])
 
   // Auto-rotate carousel images
   useEffect(() => {
@@ -201,6 +206,49 @@ export default function HomePage() {
     }, 4000)
     return () => clearInterval(interval)
   }, [])
+
+  // Load product images on component mount
+  useEffect(() => {
+    const loadImages = async () => {
+      setImagesLoading(true)
+      try {
+        console.log('Loading product images...')
+        const imageCache = await preloadProductImages(
+          featuredProducts.map(p => ({ 
+            name: p.name, 
+            category: p.name.includes("Scarf") || p.name.includes("Dress") ? "Fashion" :
+                     p.name.includes("Mask") ? "Art" :
+                     p.name.includes("Oil") ? "Beauty" :
+                     p.name.includes("Jewelry") ? "Jewelry" : "Fashion"
+          }))
+        )
+        console.log('Product images loaded:', imageCache)
+        setProductImages(imageCache)
+      } catch (error) {
+        console.error('Failed to load product images:', error)
+      } finally {
+        setImagesLoading(false)
+      }
+    }
+
+    loadImages()
+  }, [])
+
+  // Handle hero image load events
+  const handleHeroImageLoad = (index: number) => {
+    console.log(`Hero image ${index} loaded successfully`)
+    setHeroImagesLoaded(prev => {
+      const newState = [...prev]
+      newState[index] = true
+      return newState
+    })
+  }
+
+  // Get the current hero image source (primary or fallback)
+  const getCurrentHeroImageSrc = () => {
+    const currentImage = heroImages[currentImageIndex]
+    return currentImage.src
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -271,41 +319,53 @@ export default function HomePage() {
                 />
                 
                 {/* Image Carousel Container */}
-                <div className="relative min-h-[500px] lg:min-h-[600px]"
+                <div className="relative bg-terracotta-500 rounded-3xl p-8 min-h-[500px] lg:min-h-[600px]"
                      style={{
                        clipPath: 'polygon(0% 0%, 100% 0%, 100% 85%, 85% 100%, 0% 100%)'
                      }}>
-                  {/* Image Carousel - Beautiful & Working */}
-                  <div className="relative w-full h-[500px] lg:h-[600px] overflow-hidden rounded-3xl shadow-2xl">
-                    {/* Removed debug indicator for clean look */}
-                    
-                    {/* Beautiful Image Display with Smooth Transitions */}
-                    <div className="absolute inset-0 w-full h-full">
-                      <img
+
+                  {/* Image Carousel */}
+                  <div className="relative w-full h-full overflow-hidden rounded-2xl">
+                    <AnimatePresence mode="wait">
+                      <motion.div
                         key={currentImageIndex}
-                        src={heroImages[currentImageIndex].src}
-                        alt={heroImages[currentImageIndex].alt}
-                        className="w-full h-full object-cover rounded-3xl transition-opacity duration-700 ease-in-out"
-                        onLoad={() => {}}
-                        onError={() => {}}
-                      />
-                      
-                      {/* Image Overlay with Info */}
-                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-6 rounded-b-3xl">
-                        <div className="text-white">
-                          <h3 className="font-semibold text-lg mb-1">
-                            {heroImages[currentImageIndex].name}
-                          </h3>
-                          <p className="text-white/80 text-sm">
-                            {heroImages[currentImageIndex].location}
-                          </p>
+                        initial={{ opacity: 0, scale: 1.1 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{ duration: 0.6 }}
+                        className="absolute inset-0"
+                      >
+                        {/* Loading state for hero images */}
+                        {!heroImagesLoaded[currentImageIndex] && (
+                          <div className="absolute inset-0 bg-gray-200 animate-pulse flex items-center justify-center">
+                            <Loader2 className="h-12 w-12 animate-spin text-gray-400" />
+                          </div>
+                        )}
+                        
+                        <img
+                          src='https://i.pinimg.com/736x/74/50/88/74508867279bc50021c77e80d5f0c1fb.jpg'
+                          alt={heroImages[currentImageIndex].alt}
+                          className="w-full h-full object-cover rounded-2xl"
+                          style={{ minHeight: 400, background: "#fff" }}
+                        />
+                        
+                        {/* Image Overlay with Info */}
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-6 rounded-b-2xl">
+                          <div className="text-white">
+                            <h3 className="font-semibold text-lg mb-1">
+                              {heroImages[currentImageIndex].name}
+                            </h3>
+                            <p className="text-white/80 text-sm">
+                              {heroImages[currentImageIndex].location}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    </div>
+                      </motion.div>
+                    </AnimatePresence>
                   </div>
 
                   {/* Image Indicators */}
-                  <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2 z-10">
+                  <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex gap-2">
                     {heroImages.map((_, index) => (
                       <button
                         key={index}
@@ -318,6 +378,10 @@ export default function HomePage() {
                       />
                     ))}
                   </div>
+
+                  {/* Decorative Elements */}
+                  <div className="absolute top-20 -left-4 w-20 h-20 bg-white/10 rounded-full blur-xl" />
+                  <div className="absolute bottom-32 -right-8 w-32 h-32 bg-white/5 rounded-full blur-2xl" />
                 </div>
               </div>
             </motion.div>
@@ -362,6 +426,13 @@ export default function HomePage() {
             </p>
           </motion.div>
 
+          {imagesLoading && (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-terracotta-500" />
+              <span className="ml-2 text-muted-foreground">Loading beautiful product images...</span>
+            </div>
+          )}
+
           <motion.div
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
             initial={{ opacity: 0, y: 30 }}
@@ -372,7 +443,7 @@ export default function HomePage() {
               <Card key={product.id} className="group hover:shadow-lg transition-all duration-300 border-muted">
                 <div className="relative overflow-hidden rounded-t-lg">
                   <img
-                    src={product.image || "/placeholder.svg"}
+                    src={productImages[product.name] || product.image || "/placeholder.svg"}
                     alt={product.name}
                     className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
                     onError={(e) => {
@@ -380,6 +451,11 @@ export default function HomePage() {
                       target.src = "/placeholder.svg"
                     }}
                   />
+                  {imagesLoading && (
+                    <div className="absolute inset-0 bg-gray-200 animate-pulse flex items-center justify-center">
+                      <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                    </div>
+                  )}
                   <Badge className="absolute top-3 left-3 bg-terracotta-500 hover:bg-terracotta-600">
                     {product.badge}
                   </Badge>

@@ -123,11 +123,6 @@ export default function SignUpPage() {
       newErrors.email = "Please enter a valid email address"
     }
 
-    // Password validation
-    if (formData.password && formData.password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters long"
-    }
-
     // Artisan-specific validation
     if (activeTab === "entrepreneur") {
       if (!formData.businessName.trim()) newErrors.businessName = "Business name is required"

@@ -82,57 +82,159 @@ export default function CartPage() {
   }, [])
 
   // PaymentButton onSuccess wrapper
-  const handlePaymentButtonSuccess = () => {
+  const handlePaymentButtonSuccess = (reference?: string) => {
+    console.log('🎯 Payment success callback triggered with reference:', reference)
+    console.log('🎯 Reference type:', typeof reference)
+    console.log('🎯 Reference value:', reference)
+    if (reference) {
+      latestReference.current = reference
+      console.log('💾 Stored payment reference:', latestReference.current)
+    } else {
+      console.log('⚠️ No reference provided in payment success callback')
+    }
+    
+    // Store cart items before clearing
+    const currentCartItems = [...cartItems];
+    console.log('📦 Stored cart items before clearing:', currentCartItems);
+    
+    // Clear the cart immediately after payment
+    if (typeof clearCart === 'function') {
+      clearCart();
+      console.log('🛒 Cart cleared after payment');
+    }
+    
+    // Show the join circle popup with artisans from the stored cart items
+    const uniqueArtisanIds = Array.from(new Set(currentCartItems.map(item => item.entrepreneurId)));
+    console.log('🆔 Unique artisan IDs found:', uniqueArtisanIds);
+    
+    const uniqueArtisans = uniqueArtisanIds.map(id => {
+      const item = currentCartItems.find(item => item.entrepreneurId === id);
+      return {
+        _id: id,
+        id: id,
+        entrepreneurId: id,
+        entrepreneur: item?.entrepreneur || 'Unknown Artisan'
+      };
+    });
+    
+    console.log('👥 Processed unique artisans:', uniqueArtisans);
+    
+    if (uniqueArtisans.length > 0) {
+      console.log('🎯 Setting current artisan and showing modal...');
+      setPendingArtisans(uniqueArtisans);
+      setCurrentArtisan(uniqueArtisans[0]);
+      setShowCircleModal(true);
+      console.log('🎯 Join circle popup triggered with artisan:', uniqueArtisans[0]);
+      console.log('🎯 Modal state should now be open');
+    } else {
+      console.log('⚠️ No artisans found in cart items for join circle popup');
+      setShowCircleModal(false);
+    }
+    
     setPaymentSuccess(true)
   }
 
   // Effect to handle order creation and modal logic after payment
   useEffect(() => {
     if (paymentSuccess) {
+      console.log('🔄 Processing payment success...')
+      console.log('📦 Cart items:', cartItems)
+      console.log('💰 Total:', total)
+      console.log('🆔 User ID:', userId)
+      console.log('🔗 Reference:', latestReference.current)
+      console.log('🔗 Reference type:', typeof latestReference.current)
+      
+      // Prevent multiple executions
+      if (!latestReference.current || latestReference.current === 'N/A') {
+        console.log('⚠️ No valid reference found, skipping order creation')
+        setPaymentSuccess(false)
+        return
+      }
+      // Check if cart has items
+      if (!cartItems || cartItems.length === 0) {
+        console.log('⚠️ No cart items found, skipping order creation')
+        toast({
+          title: "No Items in Cart",
+          description: "Cannot create order with empty cart.",
+          variant: "destructive"
+        })
+        setPaymentSuccess(false)
+        return
+      }
+      // Check if user ID is valid
+      if (!userId || userId === 'guest') {
+        console.log('⚠️ Invalid user ID, skipping order creation')
+        toast({
+          title: "Authentication Required",
+          description: "Please log in to complete your order.",
+          variant: "destructive"
+        })
+        setPaymentSuccess(false)
+        return
+      }
       // Use the latest reference if needed (could be set in PaymentButton via callback, or just trigger order creation here)
       (async () => {
         setIsProcessingPayment(false)
         try {
           const ordersUrl = getApiUrl('/app/orders')
-          await fetch(ordersUrl, {
+          console.log('📡 Sending order to:', ordersUrl)
+          
+          const orderData = {
+            userId: userId,
+            items: cartItems.map(item => ({
+              productId: item.id, // Map cart item id to productId for backend
+              quantity: item.quantity,
+              price: item.price,
+              name: item.name,
+              entrepreneur: item.entrepreneur,
+              entrepreneurId: item.entrepreneurId
+            })),
+            total,
+            reference: latestReference.current,
+          }
+          console.log('📋 Order data being sent:', orderData)
+          console.log('📋 Order data JSON:', JSON.stringify(orderData, null, 2))
+          
+          const response = await fetch(ordersUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userId: userId,
-              items: cartItems,
-              total,
-              reference: latestReference.current || 'N/A',
-            })
+            body: JSON.stringify(orderData)
           })
-        } catch (e) {
-          // Optionally show error toast
+          
+          console.log('📡 Order creation response status:', response.status)
+          console.log('📡 Order creation response headers:', Object.fromEntries(response.headers.entries()))
+          
+          if (!response.ok) {
+            const errorData = await response.json()
+            console.error('❌ Order creation failed:', errorData)
+            toast({
+              title: "Order Creation Failed",
+              description: errorData.error || "Failed to save order to database",
+              variant: "destructive"
+            })
+            setPaymentSuccess(false)
+            return
+          }
+          
+          const orderResult = await response.json()
+          console.log('✅ Order created successfully:', orderResult)
+          
+        } catch (e: any) {
+          console.error('💥 Order creation error:', e)
+          console.error('💥 Error details:', e.message)
+          console.error('💥 Error stack:', e.stack)
+          toast({
+            title: "Order Creation Error",
+            description: "Failed to save order to database. Please contact support.",
+            variant: "destructive"
+          })
+          setPaymentSuccess(false)
+          return
         }
-        const uniqueArtisanIds = Array.from(new Set(cartItems.map(item => item.entrepreneurId)));
-        const uniqueArtisans = uniqueArtisanIds.map(id => {
-          const item = cartItems.find(item => item.entrepreneurId === id);
-          return {
-            _id: id,
-            id: id,
-            entrepreneurId: id,
-            entrepreneur: item?.entrepreneur || 'Unknown Artisan'
-          };
-        });
-        setPendingArtisans(uniqueArtisans)
-        setCurrentArtisan(uniqueArtisans[0])
-        clearCart();
-        toast({
-          title: "Payment Successful!",
-          description: `Your payment was successful.`,
-          action: (
-            <button onClick={() => router.push('/orders')} className="underline text-primary">
-              View Order
-            </button>
-          )
-        })
         setPaymentSuccess(false)
       })()
     }
-  }, [paymentSuccess])
+  }, [paymentSuccess, cartItems, total, userId, clearCart, toast, router])
 
   const handleJoinCircle = async (artisan: any) => {
     // Check if user is authenticated
@@ -253,14 +355,21 @@ export default function CartPage() {
   }
 
   useEffect(() => {
+    console.log('🔍 Modal useEffect triggered');
+    console.log('🔍 currentArtisan:', currentArtisan);
+    console.log('🔍 showCircleModal:', showCircleModal);
     if (currentArtisan) {
+      console.log('🔍 Setting modal to open for artisan:', currentArtisan);
       setShowCircleModal(true);
     }
   }, [currentArtisan]);
 
   // Modal always rendered so it appears even if cart is empty
   const modal = (
-    <Dialog open={showCircleModal} onOpenChange={setShowCircleModal}>
+    <Dialog open={showCircleModal} onOpenChange={(open) => {
+      console.log('🔍 Dialog onOpenChange called with:', open);
+      setShowCircleModal(open);
+    }}>
       <DialogContent>
         <DialogTitle>Join {currentArtisan?.entrepreneur}'s Circle?</DialogTitle>
         <DialogDescription>
@@ -464,6 +573,22 @@ export default function CartPage() {
                     onSuccess={handlePaymentButtonSuccess}
                   />
 
+                  {/* Temporary test button - remove this after testing */}
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      console.log('🧪 Test button clicked');
+                      setCurrentArtisan({
+                        _id: 'test-artisan',
+                        entrepreneur: 'Test Artisan',
+                        entrepreneurId: 'test-artisan'
+                      });
+                      setShowCircleModal(true);
+                    }}
+                  >
+                    Test Modal
+                  </Button>
+
                   <div className="text-center">
                     <Link href="/marketplace">
                       <Button variant="ghost" className="text-[var(--color-accent-primary)]">
@@ -479,9 +604,9 @@ export default function CartPage() {
                       After purchase, you'll be invited to join the circles of the entrepreneurs whose products you
                       bought.
                     </p>
-                    <Badge variant="secondary" className="text-xs">
-                      Earn rewards for referrals and support
-                    </Badge>
+                                         <Badge variant="secondary" className="text-xs">
+                        Earn rewards for referrals and support
+                      </Badge>
                   </div>
                 </CardContent>
               </Card>

@@ -1,28 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getApiUrl } from '@/lib/api-config'
 
 export async function POST(request: NextRequest) {
   console.log('🚀 Login API route called')
-  console.log('🔧 Environment check:')
-  console.log('  - NODE_ENV:', process.env.NODE_ENV)
-  console.log('  - NEXT_PUBLIC_BACKEND_URL:', process.env.NEXT_PUBLIC_BACKEND_URL)
   
   try {
     const body = await request.json()
     console.log('🔐 Login request body:', body)
     
-    // Use the API configuration utility to get the correct backend URL
-    const loginUrl = getApiUrl('/auth/login')
+    // Temporarily hardcode the backend URL for testing
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000'
+    const loginUrl = `${backendUrl}/auth/login`
     console.log('🌐 Backend URL from env:', process.env.NEXT_PUBLIC_BACKEND_URL)
     console.log('🌐 Sending request to:', loginUrl)
-    console.log('🌐 Full request details:', {
-      url: loginUrl,
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: body
-    })
     
-    console.log('📡 Attempting to fetch from backend...')
     const response = await fetch(loginUrl, {
       method: 'POST',
       headers: {
@@ -32,19 +22,9 @@ export async function POST(request: NextRequest) {
     })
 
     console.log('📡 Backend response status:', response.status)
-    console.log('📡 Backend response headers:', Object.fromEntries(response.headers.entries()))
 
-    let data
-    try {
-      data = await response.json()
-      console.log('📡 Backend response data:', data)
-    } catch (parseError) {
-      console.error('❌ Failed to parse backend response:', parseError)
-      return NextResponse.json(
-        { error: 'Invalid response from backend server' },
-        { status: 500 }
-      )
-    }
+    const data = await response.json()
+    console.log('📡 Backend response data:', data)
 
     if (!response.ok) {
       console.error('❌ Backend login failed:', data)

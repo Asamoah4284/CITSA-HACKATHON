@@ -4,8 +4,6 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { getApiUrl } from "@/lib/api-config"
-import { ApiStatus } from "@/components/api-status"
 
 export default function TestConnectionPage() {
   const [testResults, setTestResults] = useState<any>(null)
@@ -19,15 +17,15 @@ export default function TestConnectionPage() {
       console.log('🧪 Testing backend connection...')
       
       // Test 1: Health check
-      const healthResponse = await fetch(getApiUrl('/health'))
+      const healthResponse = await fetch('https://citsa-hackathon-2.onrender.com/health')
       const healthData = await healthResponse.json()
       
       // Test 2: Test endpoint
-      const testResponse = await fetch(getApiUrl('/test'))
+      const testResponse = await fetch('https://citsa-hackathon-2.onrender.com/test')
       const testData = await testResponse.json()
       
       // Test 3: Login endpoint (without credentials)
-      const loginResponse = await fetch(getApiUrl('/auth/login'), {
+      const loginResponse = await fetch('https://citsa-hackathon-2.onrender.com/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -77,19 +75,14 @@ export default function TestConnectionPage() {
           <p className="text-gray-600">Test the connection to the deployed backend server</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <div>
-            <ApiStatus />
-          </div>
-          <div className="flex items-center justify-center">
-            <Button 
-              onClick={testBackendConnection} 
-              disabled={isLoading}
-              className="w-full sm:w-auto"
-            >
-              {isLoading ? 'Testing...' : 'Test Backend Connection'}
-            </Button>
-          </div>
+        <div className="mb-6">
+          <Button 
+            onClick={testBackendConnection} 
+            disabled={isLoading}
+            className="w-full sm:w-auto"
+          >
+            {isLoading ? 'Testing...' : 'Test Backend Connection'}
+          </Button>
         </div>
 
         {testResults && (
