@@ -182,7 +182,15 @@ userSchema.methods.generateAuthToken = function() {
 
 // Add points method
 userSchema.methods.addPoints = function(points) {
+  console.log('💰 AddPoints Debug:');
+  console.log('User:', this.name, this.email);
+  console.log('Current Points:', this.points);
+  console.log('Points to Add:', points);
+  
   this.points += points;
+  
+  console.log('New Points Total:', this.points);
+  
   return this.save();
 };
 
@@ -327,20 +335,32 @@ userSchema.methods.addUsedIP = function(ip) {
 // Award referral points to both referrer and new user
 userSchema.statics.awardReferralPoints = async function(referralCode, newUserId) {
   try {
+    console.log('🏆 AwardReferralPoints Debug:');
+    console.log('Referral Code:', referralCode);
+    console.log('New User ID:', newUserId);
+    
     // Find the referrer by their referral code
     const referrer = await this.findByReferralCode(referralCode);
     if (!referrer) {
       throw new Error('Invalid referral code');
     }
+    
+    console.log('Referrer Found:', referrer.name, referrer.email);
+    console.log('Referrer Points Before:', referrer.points);
 
     // Find the new user
     const newUser = await this.findById(newUserId);
     if (!newUser) {
       throw new Error('New user not found');
     }
+    
+    console.log('New User Found:', newUser.name, newUser.email);
 
     // Award points to referrer (100 points for successful referral)
     await referrer.addPoints(100);
+    
+    console.log('Points Added Successfully');
+    console.log('Referrer Points After:', referrer.points);
 
     // New user gets 0 points (no bonus for using a referral code)
     // await newUser.addPoints(50); // Removed this line
@@ -352,6 +372,7 @@ userSchema.statics.awardReferralPoints = async function(referralCode, newUserId)
       newUserPointsAwarded: 0
     };
   } catch (error) {
+    console.error('Error in awardReferralPoints:', error);
     throw error;
   }
 };

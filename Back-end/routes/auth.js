@@ -111,7 +111,17 @@ router.post('/register', registerValidation, handleValidationErrors, async (req,
     let referralResult = null;
     if (enteredReferralCode && referrer && !fraudDetected) {
       try {
+        console.log('🎯 Points Awarding Debug:');
+        console.log('Entered Referral Code:', enteredReferralCode);
+        console.log('Referrer:', referrer.name, referrer.email);
+        console.log('Referrer Current Points:', referrer.points);
+        console.log('Fraud Detected:', fraudDetected);
+        console.log('New User ID:', user._id);
+        
         referralResult = await User.awardReferralPoints(enteredReferralCode, user._id);
+        
+        console.log('Referral Result:', referralResult);
+        console.log('Referrer Points After Award:', referralResult.referrer.points);
         
         // Track all IP addresses and device tokens used by both users
         await referrer.addUsedIPs(req.clientIPs);
@@ -122,16 +132,12 @@ router.post('/register', registerValidation, handleValidationErrors, async (req,
         console.error('Error awarding referral points:', error);
         // Don't fail registration if referral points fail
       }
-    } else if (enteredReferralCode && referrer) {
-      // Even if fraud detected, track IPs and device tokens for future detection
-      try {
-        await referrer.addUsedIPs(req.clientIPs);
-        await referrer.addUsedDeviceTokens([deviceToken]);
-        await user.addUsedIPs(req.clientIPs);
-        await user.addUsedDeviceTokens([deviceToken]);
-      } catch (error) {
-        console.error('Error tracking IPs and device tokens:', error);
-      }
+    } else {
+      console.log('🚫 Points Not Awarded:');
+      console.log('Entered Referral Code:', enteredReferralCode);
+      console.log('Referrer exists:', !!referrer);
+      console.log('Fraud Detected:', fraudDetected);
+      console.log('Fraud Reason:', fraudReason);
     }
 
     // Generate JWT token
