@@ -1,6 +1,7 @@
 const express = require('express');
 const Product = require('../models/Product');
 const Artisan = require('../models/Artisan');
+const User = require('../models/User');
 
 const router = express.Router();
 
@@ -177,6 +178,95 @@ router.get('/products', async (req, res) => {
     console.error('Get products error:', error);
     res.status(500).json({
       error: 'Failed to fetch products',
+      message: error.message
+    });
+  }
+});
+
+// GET /public/users - Get all users with pagination and filtering
+router.get('/users', async (req, res) => {
+  try {
+    const { 
+      page = 1, 
+      limit = 10, 
+      userType, 
+      search, 
+      sortBy = 'createdAt', 
+      sortOrder = 'desc' 
+    } = req.query;
+    
+    // Build query
+    const query = {};
+    
+    // Filter by user type
+    if (userType && ['customer', 'artisan'].includes(userType)) {
+      query.userType = userType;
+    }
+    
+    // Search by name or email
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    // Build sort object
+    const sort = {};
+    sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
+    
+    // Execute query with pagination
+    const users = await User.find(query)
+      .select('-password') // Exclude password from response
+      .sort(sort)
+      .limit(parseInt(limit))
+      .skip((parseInt(page) - 1) * parseInt(limit));
+    
+    // Get total count for pagination
+    const total = await User.countDocuments(query);
+    
+    // Format response
+    const formattedUsers = users.map(user => ({
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      userType: user.userType,
+      points: user.points,
+      myReferralCode: user.myReferralCode,
+      enteredReferralCode: user.enteredReferralCode,
+      businessName: user.businessName,
+      businessCategory: user.businessCategory,
+      businessDescription: user.businessDescription,
+      phone: user.phone,
+      country: user.country,
+      city: user.city,
+      website: user.website,
+      isActive: user.isActive,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt
+    }));
+    
+    res.json({
+      users: formattedUsers,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(total / limit),
+        totalUsers: total,
+        hasNextPage: parseInt(page) * parseInt(limit) < total,
+        hasPrevPage: parseInt(page) > 1,
+        limit: parseInt(limit)
+      },
+      filters: {
+        userType: userType || 'all',
+        search: search || '',
+        sortBy,
+        sortOrder
+      }
+    });
+  } catch (error) {
+    console.error('Get users error:', error);
+    res.status(500).json({
+      error: 'Failed to fetch users',
       message: error.message
     });
   }
