@@ -9,7 +9,6 @@ const authRoutes = require('./routes/auth');
 const publicRoutes = require('./routes/public');
 const appRoutes = require('./routes/app');
 const internalRoutes = require('./routes/internal');
-const { captureIP } = require('./middleware/auth');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -24,9 +23,6 @@ app.use(cors({
   origin: true, // Allow all origins for testing
   credentials: true
 }));
-
-// IP capture middleware for fraud detection
-app.use(captureIP);
 
 // Rate limiting
 const limiter = rateLimit({
