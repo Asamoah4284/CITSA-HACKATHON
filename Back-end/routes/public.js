@@ -1,6 +1,7 @@
 const express = require('express');
 const Product = require('../models/Product');
 const Artisan = require('../models/Artisan');
+const User = require('../models/User');
 
 const router = express.Router();
 
@@ -177,6 +178,110 @@ router.get('/products', async (req, res) => {
     console.error('Get products error:', error);
     res.status(500).json({
       error: 'Failed to fetch products',
+      message: error.message
+    });
+  }
+});
+
+// GET /public/users - List all users
+router.get('/users', async (req, res) => {
+  try {
+    const { page = 1, limit = 10, userType, country, city } = req.query;
+    
+    const query = { isActive: true };
+    
+    if (userType) {
+      query.userType = userType;
+    }
+    
+    if (country) {
+      query.country = new RegExp(country, 'i');
+    }
+    
+    if (city) {
+      query.city = new RegExp(city, 'i');
+    }
+
+    const users = await User.find(query)
+      .limit(limit * 1)
+      .skip((page - 1) * limit)
+      .select('-password -__v') // Exclude password and version key
+      .sort({ createdAt: -1 });
+
+    const total = await User.countDocuments(query);
+
+    res.json({
+      users: users.map(user => ({
+        id: user._id,
+        email: user.email,
+        name: user.name,
+        userType: user.userType,
+        points: user.points,
+        myReferralCode: user.myReferralCode,
+        businessName: user.businessName,
+        businessCategory: user.businessCategory,
+        businessDescription: user.businessDescription,
+        phone: user.phone,
+        country: user.country,
+        city: user.city,
+        website: user.website,
+        isActive: user.isActive,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt
+      })),
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(total / limit),
+        totalUsers: total,
+        hasNextPage: page * limit < total,
+        hasPrevPage: page > 1
+      }
+    });
+  } catch (error) {
+    console.error('Get users error:', error);
+    res.status(500).json({
+      error: 'Failed to fetch users',
+      message: error.message
+    });
+  }
+});
+
+// GET /public/users/:id - Get specific user by ID
+router.get('/users/:id', async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id)
+      .select('-password -__v'); // Exclude password and version key
+
+    if (!user) {
+      return res.status(404).json({
+        error: 'User not found'
+      });
+    }
+
+    res.json({
+      user: {
+        id: user._id,
+        email: user.email,
+        name: user.name,
+        userType: user.userType,
+        points: user.points,
+        myReferralCode: user.myReferralCode,
+        businessName: user.businessName,
+        businessCategory: user.businessCategory,
+        businessDescription: user.businessDescription,
+        phone: user.phone,
+        country: user.country,
+        city: user.city,
+        website: user.website,
+        isActive: user.isActive,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt
+      }
+    });
+  } catch (error) {
+    console.error('Get user error:', error);
+    res.status(500).json({
+      error: 'Failed to fetch user',
       message: error.message
     });
   }
