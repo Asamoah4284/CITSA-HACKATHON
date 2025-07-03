@@ -70,6 +70,24 @@ const userSchema = new mongoose.Schema({
       default: Date.now
     }
   }],
+  // Device token tracking for fraud detection
+  registrationDeviceToken: {
+    type: String,
+    trim: true,
+    maxlength: [255, 'Device token cannot exceed 255 characters']
+  },
+  // Track all device tokens used by this user
+  usedDeviceTokens: [{
+    token: {
+      type: String,
+      trim: true,
+      maxlength: [255, 'Device token cannot exceed 255 characters']
+    },
+    usedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
   // Artisan fields
   businessName: {
     type: String,
@@ -173,13 +191,38 @@ userSchema.statics.findByReferralCode = function(referralCode) {
   return this.findOne({ myReferralCode: referralCode });
 };
 
-// Check for fraud by IP address
-userSchema.statics.checkForFraud = async function(referrerCode, clientIPs) {
+// Check for fraud by IP address and device token
+userSchema.statics.checkForFraud = async function(referrerCode, clientIPs, deviceToken) {
   try {
     // Find the referrer
     const referrer = await this.findByReferralCode(referrerCode);
     if (!referrer) {
       throw new Error('Invalid referral code');
+    }
+
+    // Check if device token matches the referrer's registration device token
+    if (referrer.registrationDeviceToken && deviceToken && referrer.registrationDeviceToken === deviceToken) {
+      return {
+        isFraud: true,
+        reason: 'Same device token detected - potential self-referral fraud',
+        referrer: referrer,
+        allowRegistration: true,
+        allowPoints: false
+      };
+    }
+
+    // Check if device token is in the referrer's used device tokens
+    if (deviceToken && referrer.usedDeviceTokens && referrer.usedDeviceTokens.length > 0) {
+      const hasUsedDeviceToken = referrer.usedDeviceTokens.some(tokenRecord => tokenRecord.token === deviceToken);
+      if (hasUsedDeviceToken) {
+        return {
+          isFraud: true,
+          reason: 'Device token previously used by referrer - potential fraud',
+          referrer: referrer,
+          allowRegistration: true,
+          allowPoints: false
+        };
+      }
     }
 
     // Check if any of the client IPs match the referrer's registration IP
@@ -220,20 +263,30 @@ userSchema.statics.checkForFraud = async function(referrerCode, clientIPs) {
       };
     }
 
-    // Check if any user with any of these IPs has used this referral code before
-    const existingUserWithIP = await this.findOne({
+    // Check if any user with any of these IPs or device token has used this referral code before
+    const existingUserQuery = {
+      enteredReferralCode: referrerCode,
       $or: [
         { 'usedIPs.ip': { $in: clientIPs } },
         { registrationIP: { $in: clientIPs } },
         { registrationIPs: { $in: clientIPs } }
-      ],
-      enteredReferralCode: referrerCode
-    });
+      ]
+    };
+
+    // Add device token check if provided
+    if (deviceToken) {
+      existingUserQuery.$or.push(
+        { 'usedDeviceTokens.token': deviceToken },
+        { registrationDeviceToken: deviceToken }
+      );
+    }
+
+    const existingUserWithIP = await this.findOne(existingUserQuery);
 
     if (existingUserWithIP) {
       return {
         isFraud: true,
-        reason: 'IP address already used with this referral code - potential fraud',
+        reason: 'IP address or device token already used with this referral code - potential fraud',
         referrer: referrer,
         allowRegistration: true,
         allowPoints: false
@@ -320,6 +373,28 @@ userSchema.methods.toJSON = function() {
   const userObject = this.toObject();
   delete userObject.password;
   return userObject;
+};
+
+// Add device tokens to user's used device tokens
+userSchema.methods.addUsedDeviceTokens = function(tokens) {
+  const currentTime = new Date();
+  
+  tokens.forEach(token => {
+    if (token) {
+      // Check if token already exists
+      const tokenExists = this.usedDeviceTokens.some(tokenRecord => tokenRecord.token === token);
+      if (!tokenExists) {
+        this.usedDeviceTokens.push({ token, usedAt: currentTime });
+      }
+    }
+  });
+  
+  return this.save();
+};
+
+// Add single device token to user's used device tokens (for backward compatibility)
+userSchema.methods.addUsedDeviceToken = function(token) {
+  return this.addUsedDeviceTokens([token]);
 };
 
 module.exports = mongoose.model('User', userSchema); 

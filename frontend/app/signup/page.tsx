@@ -16,6 +16,7 @@ import { ArrowRight, User, Store, Mail, Lock, Phone, MapPin, Globe, Heart, Spark
 import Link from "next/link"
 import { motion } from "framer-motion"
 import { useRouter } from "next/navigation"
+import { getDeviceToken } from "@/lib/device-token"
 
 const africanCountries = [
   "Nigeria",
@@ -175,6 +176,16 @@ export default function SignUpPage() {
         requestData.city = formData.city
         if (formData.website) requestData.website = formData.website
       }
+
+      const deviceToken = await getDeviceToken()
+      if (deviceToken) {
+        requestData.deviceToken = deviceToken
+      }
+
+      // Debug logging
+      console.log('🔍 Device Token Debug:')
+      console.log('Device Token:', deviceToken)
+      console.log('Full Request Payload:', requestData)
 
       const response = await fetch('/api/auth/register', {
         method: 'POST',
