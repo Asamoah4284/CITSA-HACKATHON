@@ -37,8 +37,8 @@ router.post('/register', registerValidation, handleValidationErrors, async (req,
     let fraudReason = null;
     
     if (enteredReferralCode) {
-      // Check for fraud using IP address
-      fraudCheck = await User.checkForFraud(enteredReferralCode, req.clientIP);
+      // Check for fraud using all IP addresses
+      fraudCheck = await User.checkForFraud(enteredReferralCode, req.clientIPs);
       
       if (fraudCheck.isFraud) {
         fraudDetected = true;
@@ -65,7 +65,8 @@ router.post('/register', registerValidation, handleValidationErrors, async (req,
       name,
       userType,
       enteredReferralCode: enteredReferralCode || null,
-      registrationIP: req.clientIP // Store the IP address used for registration
+      registrationIP: req.clientIP, // Keep first IP for backward compatibility
+      registrationIPs: req.clientIPs // Store all IP addresses
     };
 
     // Add artisan-specific fields if user type is artisan
@@ -88,9 +89,21 @@ router.post('/register', registerValidation, handleValidationErrors, async (req,
     if (enteredReferralCode && referrer && !fraudDetected) {
       try {
         referralResult = await User.awardReferralPoints(enteredReferralCode, user._id);
+        
+        // Track all IP addresses used by both users
+        await referrer.addUsedIPs(req.clientIPs);
+        await user.addUsedIPs(req.clientIPs);
       } catch (error) {
         console.error('Error awarding referral points:', error);
         // Don't fail registration if referral points fail
+      }
+    } else if (enteredReferralCode && referrer) {
+      // Even if fraud detected, track IPs for future detection
+      try {
+        await referrer.addUsedIPs(req.clientIPs);
+        await user.addUsedIPs(req.clientIPs);
+      } catch (error) {
+        console.error('Error tracking IPs:', error);
       }
     }
 

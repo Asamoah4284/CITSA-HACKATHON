@@ -52,6 +52,12 @@ const userSchema = new mongoose.Schema({
     trim: true,
     maxlength: [45, 'IP address cannot exceed 45 characters']
   },
+  // Store all IP addresses from registration
+  registrationIPs: [{
+    type: String,
+    trim: true,
+    maxlength: [45, 'IP address cannot exceed 45 characters']
+  }],
   // Track all IP addresses used by this user
   usedIPs: [{
     ip: {
@@ -168,7 +174,7 @@ userSchema.statics.findByReferralCode = function(referralCode) {
 };
 
 // Check for fraud by IP address
-userSchema.statics.checkForFraud = async function(referrerCode, clientIP) {
+userSchema.statics.checkForFraud = async function(referrerCode, clientIPs) {
   try {
     // Find the referrer
     const referrer = await this.findByReferralCode(referrerCode);
@@ -176,8 +182,8 @@ userSchema.statics.checkForFraud = async function(referrerCode, clientIP) {
       throw new Error('Invalid referral code');
     }
 
-    // Check if the client IP matches the referrer's registration IP
-    if (referrer.registrationIP === clientIP) {
+    // Check if any of the client IPs match the referrer's registration IP
+    if (referrer.registrationIP && clientIPs.includes(referrer.registrationIP)) {
       return {
         isFraud: true,
         reason: 'Same IP address detected - potential self-referral fraud',
@@ -187,21 +193,40 @@ userSchema.statics.checkForFraud = async function(referrerCode, clientIP) {
       };
     }
 
-    // Check if the client IP is in the referrer's used IPs
-    const hasUsedIP = referrer.usedIPs.some(ipRecord => ipRecord.ip === clientIP);
-    if (hasUsedIP) {
+    // Check if any of the client IPs match any of the referrer's registration IPs
+    if (referrer.registrationIPs && referrer.registrationIPs.length > 0) {
+      const matchingIPs = clientIPs.filter(ip => referrer.registrationIPs.includes(ip));
+      if (matchingIPs.length > 0) {
+        return {
+          isFraud: true,
+          reason: `Same IP address detected (${matchingIPs.join(', ')}) - potential self-referral fraud`,
+          referrer: referrer,
+          allowRegistration: true,
+          allowPoints: false
+        };
+      }
+    }
+
+    // Check if any of the client IPs are in the referrer's used IPs
+    const referrerUsedIPs = referrer.usedIPs.map(ipRecord => ipRecord.ip);
+    const matchingUsedIPs = clientIPs.filter(ip => referrerUsedIPs.includes(ip));
+    if (matchingUsedIPs.length > 0) {
       return {
         isFraud: true,
-        reason: 'IP address previously used by referrer - potential fraud',
+        reason: `IP address previously used by referrer (${matchingUsedIPs.join(', ')}) - potential fraud`,
         referrer: referrer,
         allowRegistration: true,
         allowPoints: false
       };
     }
 
-    // Check if any user with this IP has used this referral code before
+    // Check if any user with any of these IPs has used this referral code before
     const existingUserWithIP = await this.findOne({
-      'usedIPs.ip': clientIP,
+      $or: [
+        { 'usedIPs.ip': { $in: clientIPs } },
+        { registrationIP: { $in: clientIPs } },
+        { registrationIPs: { $in: clientIPs } }
+      ],
       enteredReferralCode: referrerCode
     });
 
@@ -226,14 +251,24 @@ userSchema.statics.checkForFraud = async function(referrerCode, clientIP) {
   }
 };
 
-// Add IP address to user's used IPs
-userSchema.methods.addUsedIP = function(ip) {
-  // Check if IP already exists
-  const ipExists = this.usedIPs.some(ipRecord => ipRecord.ip === ip);
-  if (!ipExists) {
-    this.usedIPs.push({ ip, usedAt: new Date() });
-  }
+// Add IP addresses to user's used IPs
+userSchema.methods.addUsedIPs = function(ips) {
+  const currentTime = new Date();
+  
+  ips.forEach(ip => {
+    // Check if IP already exists
+    const ipExists = this.usedIPs.some(ipRecord => ipRecord.ip === ip);
+    if (!ipExists) {
+      this.usedIPs.push({ ip, usedAt: currentTime });
+    }
+  });
+  
   return this.save();
+};
+
+// Add single IP address to user's used IPs (for backward compatibility)
+userSchema.methods.addUsedIP = function(ip) {
+  return this.addUsedIPs([ip]);
 };
 
 // Award referral points to both referrer and new user
