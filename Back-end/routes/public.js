@@ -50,32 +50,6 @@ router.get('/artisans/:id', async (req, res) => {
       });
     }
 
-    // Get top patrons for this artisan
-    const Referral = require('../models/Referral');
-    const User = require('../models/User');
-    const topPatronsAgg = await Referral.aggregate([
-      { $match: { artisan: artisan._id, status: { $in: ['active', 'completed'] } } },
-      { $group: { _id: '$referrer', points: { $sum: '$totalPointsAwarded' } } },
-      { $sort: { points: -1 } },
-      { $limit: 5 },
-      {
-        $lookup: {
-          from: 'users',
-          localField: '_id',
-          foreignField: '_id',
-          as: 'user'
-        }
-      },
-      { $unwind: '$user' },
-      {
-        $project: {
-          name: '$user.name',
-          points: 1,
-          avatar: { $literal: null }
-        }
-      }
-    ]);
-
     res.json({
       artisan: {
         id: artisan._id,
@@ -86,8 +60,7 @@ router.get('/artisans/:id', async (req, res) => {
         specialty: artisan.specialty,
         isActive: artisan.isActive,
         productCount: artisan.productCount,
-        products: artisan.products,
-        topPatrons: topPatronsAgg
+        products: artisan.products
       }
     });
   } catch (error) {

@@ -20,6 +20,13 @@ const registerValidation = [
   body('userType')
     .isIn(['customer', 'artisan'])
     .withMessage('User type must be either customer or artisan'),
+  body('enteredReferralCode')
+    .optional()
+    .trim()
+    .isLength({ min: 1, max: 50 })
+    .withMessage('Entered referral code must be between 1 and 50 characters long')
+    .matches(/^[A-Z0-9]+$/)
+    .withMessage('Entered referral code can only contain uppercase letters and numbers'),
   // Conditional validation for artisan fields
   body('businessName')
     .if(body('userType').equals('artisan'))
@@ -69,50 +76,6 @@ const loginValidation = [
     .withMessage('Password is required')
 ];
 
-// Validation middleware for referrals
-const referralValidation = [
-  body('refereeEmail')
-    .isEmail()
-    .withMessage('Please provide a valid referee email address')
-    .normalizeEmail(),
-  body('artisanId')
-    .isMongoId()
-    .withMessage('Please provide a valid artisan ID')
-];
-
-// Validation middleware for generating referral links
-const generateReferralLinkValidation = [
-  body('artisanId')
-    .isMongoId()
-    .withMessage('Please provide a valid artisan ID')
-];
-
-// Validation middleware for claiming referral links
-const claimReferralValidation = [
-  body('referralCode')
-    .isString()
-    .trim()
-    .isLength({ min: 8, max: 8 })
-    .withMessage('Referral code must be exactly 8 characters long')
-    .matches(/^[A-Z0-9]+$/)
-    .withMessage('Referral code must contain only uppercase letters and numbers')
-];
-
-// Validation middleware for updating referral scores
-const updateScoreValidation = [
-  body('referralId')
-    .isMongoId()
-    .withMessage('Please provide a valid referral ID'),
-  body('qualityScore')
-    .isFloat({ min: 0, max: 10 })
-    .withMessage('Quality score must be a number between 0 and 10'),
-  body('reasoning')
-    .isString()
-    .trim()
-    .isLength({ min: 10, max: 1000 })
-    .withMessage('Reasoning must be between 10 and 1000 characters long')
-];
-
 // Middleware to handle validation errors
 const handleValidationErrors = (req, res, next) => {
   const errors = validationResult(req);
@@ -131,9 +94,5 @@ const handleValidationErrors = (req, res, next) => {
 module.exports = {
   registerValidation,
   loginValidation,
-  referralValidation,
-  generateReferralLinkValidation,
-  claimReferralValidation,
-  updateScoreValidation,
   handleValidationErrors
 }; 

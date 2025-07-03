@@ -12,6 +12,7 @@ router.post('/register', registerValidation, handleValidationErrors, async (req,
       password, 
       name, 
       userType,
+      enteredReferralCode,
       businessName,
       businessCategory,
       businessDescription,
@@ -29,12 +30,31 @@ router.post('/register', registerValidation, handleValidationErrors, async (req,
       });
     }
 
+    // Validate entered referral code if provided
+    let referrer = null;
+    if (enteredReferralCode) {
+      referrer = await User.findByReferralCode(enteredReferralCode);
+      if (!referrer) {
+        return res.status(400).json({
+          error: 'Invalid referral code'
+        });
+      }
+      
+      // Prevent self-referral
+      if (referrer.email === email) {
+        return res.status(400).json({
+          error: 'You cannot refer yourself'
+        });
+      }
+    }
+
     // Create user data object
     const userData = {
       email,
       password,
       name,
-      userType
+      userType,
+      enteredReferralCode: enteredReferralCode || null
     };
 
     // Add artisan-specific fields if user type is artisan
@@ -50,13 +70,24 @@ router.post('/register', registerValidation, handleValidationErrors, async (req,
 
     // Create new user
     const user = new User(userData);
-
     await user.save();
+
+    // Award referral points if valid referrer code was used
+    let referralResult = null;
+    if (enteredReferralCode && referrer) {
+      try {
+        referralResult = await User.awardReferralPoints(enteredReferralCode, user._id);
+      } catch (error) {
+        console.error('Error awarding referral points:', error);
+        // Don't fail registration if referral points fail
+      }
+    }
 
     // Generate JWT token
     const token = user.generateAuthToken();
 
-    res.status(201).json({
+    // Prepare response
+    const responseData = {
       message: 'User registered successfully',
       user: {
         id: user._id,
@@ -64,13 +95,26 @@ router.post('/register', registerValidation, handleValidationErrors, async (req,
         name: user.name,
         userType: user.userType,
         points: user.points,
+        myReferralCode: user.myReferralCode,
+        enteredReferralCode: user.enteredReferralCode,
         businessName: user.businessName,
         businessCategory: user.businessCategory,
         country: user.country,
         city: user.city
       },
       token
-    });
+    };
+
+    // Add referral information if points were awarded
+    if (referralResult) {
+      responseData.referralInfo = {
+        referrerName: referrer.name,
+        pointsAwarded: referralResult.newUserPointsAwarded,
+        referrerPointsAwarded: referralResult.referrerPointsAwarded
+      };
+    }
+
+    res.status(201).json(responseData);
   } catch (error) {
     console.error('Registration error:', error);
     res.status(500).json({

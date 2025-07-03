@@ -28,18 +28,23 @@ const userSchema = new mongoose.Schema({
     required: [true, 'User type is required'],
     default: 'customer'
   },
-  // Referral code field
-  referralCode: {
-    type: String,
-    default: null,
-    trim: true,
-    maxlength: [20, 'Referral code cannot exceed 20 characters']
-  },
   // Customer fields
   points: {
     type: Number,
     default: 0,
     min: [0, 'Points cannot be negative']
+  },
+  myReferralCode: {
+    type: String,
+    trim: true,
+    maxlength: [50, 'Referral code cannot exceed 50 characters']
+  },
+  // Code that user entered during registration (who referred them)
+  enteredReferralCode: {
+    type: String,
+    trim: true,
+    maxlength: [50, 'Entered referral code cannot exceed 50 characters'],
+    default: null
   },
   // Artisan fields
   businessName: {
@@ -105,6 +110,20 @@ userSchema.pre('save', async function(next) {
   }
 });
 
+// Generate referral code for new users
+userSchema.pre('save', async function(next) {
+  // Only generate referral code for new users who don't have one
+  if (this.isNew && !this.myReferralCode) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = '';
+    for (let i = 0; i < 8; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    this.myReferralCode = result;
+  }
+  next();
+});
+
 // Compare password method
 userSchema.methods.comparePassword = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
@@ -122,6 +141,55 @@ userSchema.methods.generateAuthToken = function() {
 // Add points method
 userSchema.methods.addPoints = function(points) {
   this.points += points;
+  return this.save();
+};
+
+// Find user by referral code (static method)
+userSchema.statics.findByReferralCode = function(referralCode) {
+  return this.findOne({ myReferralCode: referralCode });
+};
+
+// Award referral points to both referrer and new user
+userSchema.statics.awardReferralPoints = async function(referralCode, newUserId) {
+  try {
+    // Find the referrer by their referral code
+    const referrer = await this.findByReferralCode(referralCode);
+    if (!referrer) {
+      throw new Error('Invalid referral code');
+    }
+
+    // Find the new user
+    const newUser = await this.findById(newUserId);
+    if (!newUser) {
+      throw new Error('New user not found');
+    }
+
+    // Award points to referrer (100 points for successful referral)
+    await referrer.addPoints(100);
+
+    // New user gets 0 points (no bonus for using a referral code)
+    // await newUser.addPoints(50); // Removed this line
+
+    return {
+      referrer: referrer,
+      newUser: newUser,
+      referrerPointsAwarded: 100,
+      newUserPointsAwarded: 0
+    };
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Generate unique referral code for the user
+userSchema.methods.generateReferralCode = function() {
+  // Generate a unique 8-character alphanumeric code
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let result = '';
+  for (let i = 0; i < 8; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  this.myReferralCode = result;
   return this.save();
 };
 

@@ -61,6 +61,7 @@ interface FormData {
   email: string
   password: string
   confirmPassword: string
+  enteredReferralCode: string
   phone: string
   country: string
   city: string
@@ -87,6 +88,7 @@ export default function SignUpPage() {
     email: "",
     password: "",
     confirmPassword: "",
+    enteredReferralCode: "",
     phone: "",
     country: "",
     city: "",
@@ -156,6 +158,11 @@ export default function SignUpPage() {
         password: formData.password,
         name: fullName,
         userType
+      }
+
+      // Add referral code if provided
+      if (formData.enteredReferralCode.trim()) {
+        requestData.enteredReferralCode = formData.enteredReferralCode.trim().toUpperCase()
       }
 
       // Add artisan-specific fields
@@ -344,6 +351,23 @@ export default function SignUpPage() {
                 </div>
 
                 <div className="space-y-2">
+                  <Label htmlFor="enteredReferralCode" className="text-sm font-medium">
+                    Referral Code (Optional)
+                  </Label>
+                  <Input
+                    id="enteredReferralCode"
+                    placeholder="Enter referral code if you have one"
+                    value={formData.enteredReferralCode}
+                    onChange={(e) => handleInputChange("enteredReferralCode", e.target.value.toUpperCase())}
+                    className={`h-11 ${errors.enteredReferralCode ? 'border-red-500' : ''}`}
+                  />
+                  {errors.enteredReferralCode && <p className="text-xs text-red-500">{errors.enteredReferralCode}</p>}
+                  <p className="text-xs text-muted-foreground">
+                    Enter a friend's referral code to earn bonus points on signup
+                  </p>
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="country" className="text-sm font-medium">
                     Country
                   </Label>
@@ -465,6 +489,23 @@ export default function SignUpPage() {
                 </div>
 
                 <div className="space-y-2">
+                  <Label htmlFor="enteredReferralCode" className="text-sm font-medium">
+                    Referral Code (Optional)
+                  </Label>
+                  <Input
+                    id="enteredReferralCode"
+                    placeholder="Enter referral code if you have one"
+                    value={formData.enteredReferralCode}
+                    onChange={(e) => handleInputChange("enteredReferralCode", e.target.value.toUpperCase())}
+                    className={`h-11 ${errors.enteredReferralCode ? 'border-red-500' : ''}`}
+                  />
+                  {errors.enteredReferralCode && <p className="text-xs text-red-500">{errors.enteredReferralCode}</p>}
+                  <p className="text-xs text-muted-foreground">
+                    Enter a friend's referral code to earn bonus points on signup
+                  </p>
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="phone" className="text-sm font-medium">
                     Phone Number
                   </Label>
@@ -579,132 +620,11 @@ export default function SignUpPage() {
                       {errors.city && <p className="text-xs text-red-500">{errors.city}</p>}
                     </div>
                   </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="website" className="text-sm font-medium">
-                      Website (Optional)
-                    </Label>
-                    <div className="relative">
-                      <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="website"
-                        type="url"
-                        placeholder="https://your-website.com"
-                        className="pl-10 h-11"
-                        value={formData.website}
-                        onChange={(e) => handleInputChange("website", e.target.value)}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <Separator className="my-4" />
-
-                <div className="space-y-2">
-                  <Label htmlFor="password" className="text-sm font-medium">
-                    Create new password
-                  </Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="••••••••"
-                      className={`pl-10 h-11 ${errors.password ? 'border-red-500' : ''}`}
-                      value={formData.password}
-                      onChange={(e) => handleInputChange("password", e.target.value)}
-                      required
-                    />
-                  </div>
-                  {errors.password && <p className="text-xs text-red-500">{errors.password}</p>}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword" className="text-sm font-medium">
-                    Confirm password
-                  </Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="confirmPassword"
-                      type="password"
-                      placeholder="••••••••"
-                      className={`pl-10 h-11 ${errors.confirmPassword ? 'border-red-500' : ''}`}
-                      value={formData.confirmPassword}
-                      onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
-                      required
-                    />
-                  </div>
-                  {errors.confirmPassword && <p className="text-xs text-red-500">{errors.confirmPassword}</p>}
                 </div>
               </TabsContent>
-
-              {/* Terms and Newsletter */}
-              <div className="space-y-3 pt-2">
-                <div className="flex items-start space-x-2">
-                  <Checkbox
-                    id="terms"
-                    checked={formData.agreeToTerms}
-                    onCheckedChange={(checked) => handleInputChange("agreeToTerms", checked as boolean)}
-                    className="mt-1"
-                  />
-                  <Label htmlFor="terms" className="text-sm leading-5">
-                    I agree to the{" "}
-                    <Link href="/terms" className="text-terracotta-600 hover:text-terracotta-700 underline">
-                      Terms of Service
-                    </Link>{" "}
-                    and{" "}
-                    <Link href="/privacy" className="text-terracotta-600 hover:text-terracotta-700 underline">
-                      Privacy Policy
-                    </Link>
-                  </Label>
-                </div>
-                {errors.terms && <p className="text-xs text-red-500">{errors.terms}</p>}
-
-                <div className="flex items-start space-x-2">
-                  <Checkbox
-                    id="newsletter"
-                    checked={formData.subscribeNewsletter}
-                    onCheckedChange={(checked) => handleInputChange("subscribeNewsletter", checked as boolean)}
-                    className="mt-1"
-                  />
-                  <Label htmlFor="newsletter" className="text-sm leading-5">
-                    Subscribe to our newsletter for updates and exclusive offers
-                  </Label>
-                </div>
-              </div>
-
-              {/* Submit Button */}
-              <Button
-                type="submit"
-                className="w-full h-12 bg-terracotta-500 hover:bg-terracotta-600 text-white font-medium text-base rounded-lg"
-                disabled={!formData.agreeToTerms || isLoading}
-              >
-                {isLoading ? (
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Creating account...
-                  </div>
-                ) : (
-                  <>
-                    Create a new account
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </>
-                )}
-              </Button>
-
-              {/* Sign In Link */}
-              <div className="text-center pt-2">
-                <p className="text-sm text-muted-foreground">
-                  Already have account?{" "}
-                  <Link href="/signin" className="text-terracotta-600 hover:text-terracotta-700 font-medium underline">
-                    Login
-                  </Link>
-                </p>
-              </div>
             </form>
-          </Tabs>
-        </motion.div>
+          </motion.div>
+        </div>
       </div>
     </div>
   )
