@@ -156,10 +156,18 @@ router.post('/login', loginValidation, handleValidationErrors, async (req, res) 
         name: user.name,
         userType: user.userType,
         points: user.points,
+        myReferralCode: user.myReferralCode,
+        enteredReferralCode: user.enteredReferralCode,
         businessName: user.businessName,
         businessCategory: user.businessCategory,
+        businessDescription: user.businessDescription,
+        phone: user.phone,
         country: user.country,
-        city: user.city
+        city: user.city,
+        website: user.website,
+        isActive: user.isActive,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt
       },
       token
     });
