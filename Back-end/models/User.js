@@ -46,6 +46,24 @@ const userSchema = new mongoose.Schema({
     maxlength: [50, 'Entered referral code cannot exceed 50 characters'],
     default: null
   },
+  // IP address tracking for fraud detection
+  registrationIP: {
+    type: String,
+    trim: true,
+    maxlength: [45, 'IP address cannot exceed 45 characters']
+  },
+  // Track all IP addresses used by this user
+  usedIPs: [{
+    ip: {
+      type: String,
+      trim: true,
+      maxlength: [45, 'IP address cannot exceed 45 characters']
+    },
+    usedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
   // Artisan fields
   businessName: {
     type: String,
@@ -147,6 +165,75 @@ userSchema.methods.addPoints = function(points) {
 // Find user by referral code (static method)
 userSchema.statics.findByReferralCode = function(referralCode) {
   return this.findOne({ myReferralCode: referralCode });
+};
+
+// Check for fraud by IP address
+userSchema.statics.checkForFraud = async function(referrerCode, clientIP) {
+  try {
+    // Find the referrer
+    const referrer = await this.findByReferralCode(referrerCode);
+    if (!referrer) {
+      throw new Error('Invalid referral code');
+    }
+
+    // Check if the client IP matches the referrer's registration IP
+    if (referrer.registrationIP === clientIP) {
+      return {
+        isFraud: true,
+        reason: 'Same IP address detected - potential self-referral fraud',
+        referrer: referrer,
+        allowRegistration: true,
+        allowPoints: false
+      };
+    }
+
+    // Check if the client IP is in the referrer's used IPs
+    const hasUsedIP = referrer.usedIPs.some(ipRecord => ipRecord.ip === clientIP);
+    if (hasUsedIP) {
+      return {
+        isFraud: true,
+        reason: 'IP address previously used by referrer - potential fraud',
+        referrer: referrer,
+        allowRegistration: true,
+        allowPoints: false
+      };
+    }
+
+    // Check if any user with this IP has used this referral code before
+    const existingUserWithIP = await this.findOne({
+      'usedIPs.ip': clientIP,
+      enteredReferralCode: referrerCode
+    });
+
+    if (existingUserWithIP) {
+      return {
+        isFraud: true,
+        reason: 'IP address already used with this referral code - potential fraud',
+        referrer: referrer,
+        allowRegistration: true,
+        allowPoints: false
+      };
+    }
+
+    return {
+      isFraud: false,
+      referrer: referrer,
+      allowRegistration: true,
+      allowPoints: true
+    };
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Add IP address to user's used IPs
+userSchema.methods.addUsedIP = function(ip) {
+  // Check if IP already exists
+  const ipExists = this.usedIPs.some(ipRecord => ipRecord.ip === ip);
+  if (!ipExists) {
+    this.usedIPs.push({ ip, usedAt: new Date() });
+  }
+  return this.save();
 };
 
 // Award referral points to both referrer and new user

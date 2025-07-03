@@ -32,15 +32,25 @@ router.post('/register', registerValidation, handleValidationErrors, async (req,
 
     // Validate entered referral code if provided
     let referrer = null;
+    let fraudCheck = null;
+    let fraudDetected = false;
+    let fraudReason = null;
+    
     if (enteredReferralCode) {
-      referrer = await User.findByReferralCode(enteredReferralCode);
-      if (!referrer) {
-        return res.status(400).json({
-          error: 'Invalid referral code'
-        });
+      // Check for fraud using IP address
+      fraudCheck = await User.checkForFraud(enteredReferralCode, req.clientIP);
+      
+      if (fraudCheck.isFraud) {
+        fraudDetected = true;
+        fraudReason = fraudCheck.reason;
+        
+        // Still allow registration but mark for no points
+        referrer = fraudCheck.referrer;
+      } else {
+        referrer = fraudCheck.referrer;
       }
       
-      // Prevent self-referral
+      // Prevent self-referral by email (this still blocks registration)
       if (referrer.email === email) {
         return res.status(400).json({
           error: 'You cannot refer yourself'
@@ -54,7 +64,8 @@ router.post('/register', registerValidation, handleValidationErrors, async (req,
       password,
       name,
       userType,
-      enteredReferralCode: enteredReferralCode || null
+      enteredReferralCode: enteredReferralCode || null,
+      registrationIP: req.clientIP // Store the IP address used for registration
     };
 
     // Add artisan-specific fields if user type is artisan
@@ -72,9 +83,9 @@ router.post('/register', registerValidation, handleValidationErrors, async (req,
     const user = new User(userData);
     await user.save();
 
-    // Award referral points if valid referrer code was used
+    // Award referral points if valid referrer code was used and no fraud detected
     let referralResult = null;
-    if (enteredReferralCode && referrer) {
+    if (enteredReferralCode && referrer && !fraudDetected) {
       try {
         referralResult = await User.awardReferralPoints(enteredReferralCode, user._id);
       } catch (error) {
@@ -111,6 +122,15 @@ router.post('/register', registerValidation, handleValidationErrors, async (req,
         referrerName: referrer.name,
         pointsAwarded: referralResult.newUserPointsAwarded,
         referrerPointsAwarded: referralResult.referrerPointsAwarded
+      };
+    }
+
+    // Add fraud detection warning if fraud was detected
+    if (fraudDetected) {
+      responseData.fraudWarning = {
+        message: 'Account created but referral points not awarded due to fraud detection',
+        reason: fraudReason,
+        details: 'Same IP address detected - referral points blocked for security'
       };
     }
 
